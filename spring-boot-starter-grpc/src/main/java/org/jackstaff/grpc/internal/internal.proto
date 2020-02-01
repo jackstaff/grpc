@@ -1,0 +1,23 @@
+
+syntax = "proto3";
+
+option java_multiple_files = false;
+option java_package = "org.jackstaff.grpc.internal";
+option java_outer_classname = "InternalProto";
+
+service Internal {
+
+    rpc Unary ( Packet ) returns ( Packet ) {}
+
+    rpc ServerStreaming (Packet) returns (stream Packet) {}
+
+    rpc ClientStreaming (stream Packet) returns (Packet) {}
+
+    rpc BidiStreaming (stream Packet) returns (stream Packet) {}
+
+}
+
+
+message Packet {
+    bytes data =1;
+}
