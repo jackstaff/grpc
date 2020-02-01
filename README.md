@@ -90,6 +90,7 @@ public interface HelloService {
   HelloReply sayHello(String name); 
   
 }
+以及其他的和2中基础类的桥接代码
 
 4. 至此，使用方式及其他，和version 1种就一样的了.
 
