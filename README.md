@@ -8,7 +8,7 @@
 为什么选择grpc呢？
 因为我对 https://github.com/grpc/grpc-java 生成的代码，提供使用的接口不满意，不是我喜欢的样子，
 
-so, road map:
+so, road map：
 version 1 (客户端和服务器端均为java)：
 开发人员只需要使用java的interface来定义客户端和服务器端接口，使用springboot来自动注入客户端接口代理以及服务器端实现bean，
 完全不需要使用protobuff定义文件(当然也就完全不需要使用官方grpc-java来生成代码).
@@ -57,7 +57,7 @@ public MyHelloClientService {
 
 
 
-version 2 (不限客户端和服务器端语言，只要支持grpc即可):
+version 2 (不限客户端和服务器端语言，只要支持grpc即可)：
 使用protobuff定义文件，在现有官方grpc-java生成的代码的基础上，再次生成新的接口/POJO文件，使其和version1风格接口一致.
 
 这个版本完成后，可以和非java语言开发service通过grpc交互，大致开发流程如下：
