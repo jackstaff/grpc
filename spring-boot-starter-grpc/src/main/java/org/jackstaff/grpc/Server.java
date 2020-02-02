@@ -2,6 +2,15 @@ package org.jackstaff.grpc;
 
 import org.springframework.core.annotation.AliasFor;
 
+import java.lang.annotation.*;
+
+/**
+ * @author reco@jackstaff.org
+ */
+
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.TYPE})
 public @interface Server {
 
     @AliasFor("value")

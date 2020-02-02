@@ -1,27 +1,72 @@
 package org.jackstaff.grpc;
 
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import java.util.Map;
-/**
- * @author reco@jackstaff.org
- */
+import java.util.*;
 
-@org.springframework.context.annotation.Configuration
-class Configuration {
+@ConfigurationProperties(prefix = "spring.grpc")
+public class Configuration {
 
-    static class Client {
+    public static class Server {
+
+        private int port;
+
+        public int getPort() {
+            return port;
+        }
+
+        public void setPort(int port) {
+            this.port = port;
+        }
+    }
+
+    public static class Client {
 
         private String host;
         private int port;
 
+        public String getHost() {
+            return host;
+        }
+
+        public void setHost(String host) {
+            this.host = host;
+        }
+
+        public int getPort() {
+            return port;
+        }
+
+        public void setPort(int port) {
+            this.port = port;
+        }
     }
 
-    @Value("${spring.grpc.port:9000}")
-    private int port;
-
-    @Value("${spring.grpc.client:}")
+    private Server server;
     private Map<String, Client> client;
+
+    public Server getServer() {
+        return server;
+    }
+
+    public void setServer(Server server) {
+        this.server = server;
+    }
+
+    public Map<String, Client> getClient() {
+        return client;
+    }
+
+    public void setClient(Map<String, Client> client) {
+        this.client = client;
+    }
+
+    Set<String> authority(){
+        if (client ==null){
+            return new HashSet<>();
+        }
+        return client.keySet();
+    }
 
 
 }

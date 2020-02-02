@@ -1,5 +1,6 @@
 package org.jackstaff.grpc;
 
+
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -11,27 +12,45 @@ import java.util.stream.IntStream;
  */
 class MethodInfo {
 
-    private Object handler;
+    private Object bean;
     private Class<?> type;
     private Method method;
-    private Interceptor[] interceptors;
+    private List<Interceptor> interceptors;
     private Mode mode;
     private int streamingIndex;
     private String error;
     private String sign;
+    private boolean asynchronous;
 
-    public MethodInfo(Class<?> type, Method method, Interceptor[] interceptors) {
-        this(null, type, method, interceptors);
+    public MethodInfo(Class<?> type, Method method) {
+        this(null, type, method, null);
     }
 
-    public MethodInfo(Object handler, Class<?> type, Method method, Interceptor[] interceptors) {
-        this.handler = handler;
+    public MethodInfo(Object bean, Class<?> type, Method method, List<Interceptor> interceptors) {
+        if (!type.isInterface()){
+            throw new RuntimeException("invalid type "+type.getName() +" MUST be interface");
+        }
+        this.bean = bean;
         this.type = type;
         this.method = method;
-        this.interceptors = interceptors;
+        this.interceptors = Optional.ofNullable(interceptors).orElseGet(ArrayList::new);
         String name = type.getName()+"/" + method.toString();
         this.sign = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8))+":"+name.hashCode();
         this.mode = checkMode();
+        if (!isInvalid()){
+            Asynchronous async = method.getAnnotation(Asynchronous.class);
+            if (async != null){
+                if (mode == Mode.Unary && method.getReturnType().equals(Void.TYPE)){
+                    this.asynchronous = true;
+                    return;
+                }
+                this.error = method +" @Asynchronous Only for Unary Call & void return";
+                this.mode = Mode.Invalid;
+            }
+        }
+        if (isInvalid()){
+            throw new RuntimeException(error);
+        }
     }
 
     private Mode checkMode() {
@@ -54,6 +73,14 @@ class MethodInfo {
                 error = method + " invalid sign";
                 return Mode.Invalid;
         }
+    }
+
+    public boolean isAsynchronous() {
+        return asynchronous;
+    }
+
+    public boolean isInvalid(){
+        return mode == Mode.Invalid;
     }
 
     public Mode getMode() {
@@ -80,12 +107,12 @@ class MethodInfo {
         return streamingIndex;
     }
 
-    public Object getHandler() {
-        return handler;
+    public Object getBean() {
+        return bean;
     }
 
     public List<Interceptor> getInterceptors() {
-        return interceptors != null ? Arrays.asList(interceptors) : new ArrayList<>();
+        return interceptors;
     }
 
     @Override
@@ -101,4 +128,11 @@ class MethodInfo {
         return Objects.hash(type, method);
     }
 
+    @Override
+    public String toString() {
+        return "MethodInfo{" +
+                "type=" + type +
+                ", method=" + method +
+                '}';
+    }
 }

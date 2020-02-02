@@ -11,6 +11,7 @@
     </content>
     <orderEntry type="jdk" jdkName="1.8" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="Bundled Protobuf Distribution" level="application" />
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter:2.2.2.RELEASE" level="project" />
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot:2.2.2.RELEASE" level="project" />
     <orderEntry type="library" name="Maven: org.springframework:spring-context:5.2.2.RELEASE" level="project" />
@@ -51,17 +52,9 @@
     <orderEntry type="library" name="Maven: com.google.api.grpc:proto-google-common-protos:1.12.0" level="project" />
     <orderEntry type="library" name="Maven: io.grpc:grpc-protobuf-lite:1.26.0" level="project" />
     <orderEntry type="library" name="Maven: io.grpc:grpc-stub:1.26.0" level="project" />
-    <orderEntry type="library" name="Maven: io.grpc:grpc-auth:1.26.0" level="project" />
-    <orderEntry type="library" name="Maven: com.google.auth:google-auth-library-credentials:0.18.0" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: javax.annotation:javax.annotation-api:1.2" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: io.grpc:grpc-testing:1.26.0" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: junit:junit:4.12" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: org.hamcrest:hamcrest-core:2.1" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: org.hamcrest:hamcrest:2.1" level="project" />
     <orderEntry type="library" name="Maven: io.protostuff:protostuff-core:1.6.2" level="project" />
     <orderEntry type="library" name="Maven: io.protostuff:protostuff-api:1.6.2" level="project" />
     <orderEntry type="library" name="Maven: io.protostuff:protostuff-runtime:1.6.2" level="project" />
     <orderEntry type="library" name="Maven: io.protostuff:protostuff-collectionschema:1.6.2" level="project" />
-    <orderEntry type="library" name="Bundled Protobuf Distribution" level="application" />
   </component>
 </module>
