@@ -1,4 +1,4 @@
-package org.jackstaff.grpc;
+package org.jackstaff.grpc.annotation;
 
 import java.lang.annotation.*;
 

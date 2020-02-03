@@ -1,8 +1,10 @@
-package org.jackstaff.grpc;
+package org.jackstaff.grpc.configuration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 @ConfigurationProperties(prefix = "spring.grpc")
 public class Configuration {
@@ -20,10 +22,9 @@ public class Configuration {
         }
     }
 
-    public static class Client {
+    public static class Client extends Server {
 
         private String host;
-        private int port;
 
         public String getHost() {
             return host;
@@ -33,13 +34,6 @@ public class Configuration {
             this.host = host;
         }
 
-        public int getPort() {
-            return port;
-        }
-
-        public void setPort(int port) {
-            this.port = port;
-        }
     }
 
     private Server server;

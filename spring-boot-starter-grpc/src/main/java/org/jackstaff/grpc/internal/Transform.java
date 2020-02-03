@@ -10,6 +10,7 @@ import io.protostuff.runtime.RuntimeSchema;
 import org.jackstaff.grpc.Packet;
 
 import java.util.Iterator;
+import java.util.Optional;
 
 /**
  * @author reco@jackstaff.org
@@ -43,18 +44,19 @@ public class Transform {
 
             @Override
             public void onNext(InternalProto.Packet value) {
-                observer.onNext(fromProto(value));
+                Optional.ofNullable(observer).ifPresent(o->o.onNext(fromProto(value)));
             }
 
             @Override
             public void onError(Throwable t) {
-                observer.onError(t);
+                Optional.ofNullable(observer).ifPresent(o->o.onError(t));
             }
 
             @Override
             public void onCompleted() {
-                observer.onCompleted();
+                Optional.ofNullable(observer).ifPresent(StreamObserver::onCompleted);
             }
+
         };
     }
 
@@ -91,6 +93,5 @@ public class Transform {
             }
         };
     }
-
 
 }

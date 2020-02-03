@@ -1,5 +1,8 @@
 package org.jackstaff.grpc;
 
+import io.grpc.Internal;
+import org.jackstaff.grpc.annotation.Asynchronous;
+import org.jackstaff.grpc.interceptor.Interceptor;
 
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -10,7 +13,8 @@ import java.util.stream.IntStream;
 /**
  * @author reco@jackstaff.org
  */
-class MethodInfo {
+@Internal
+public class MethodInfo {
 
     private Object bean;
     private Class<?> type;
@@ -20,7 +24,6 @@ class MethodInfo {
     private int streamingIndex;
     private String error;
     private String sign;
-    private boolean asynchronous;
 
     public MethodInfo(Class<?> type, Method method) {
         this(null, type, method, null);
@@ -41,7 +44,7 @@ class MethodInfo {
             Asynchronous async = method.getAnnotation(Asynchronous.class);
             if (async != null){
                 if (mode == Mode.Unary && method.getReturnType().equals(Void.TYPE)){
-                    this.asynchronous = true;
+                    this.mode = Mode.AsynchronousUnary;
                     return;
                 }
                 this.error = method +" @Asynchronous Only for Unary Call & void return";
@@ -73,10 +76,6 @@ class MethodInfo {
                 error = method + " invalid sign";
                 return Mode.Invalid;
         }
-    }
-
-    public boolean isAsynchronous() {
-        return asynchronous;
     }
 
     public boolean isInvalid(){
@@ -135,4 +134,5 @@ class MethodInfo {
                 ", method=" + method +
                 '}';
     }
+
 }

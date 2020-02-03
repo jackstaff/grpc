@@ -1,5 +1,7 @@
 package org.jackstaff.grpc;
 
+import org.jackstaff.grpc.exception.GrpcException;
+
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 

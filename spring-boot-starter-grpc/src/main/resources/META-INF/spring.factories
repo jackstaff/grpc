@@ -1,1 +1,1 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=org.jackstaff.grpc.AutoConfiguration
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=org.jackstaff.grpc.configuration.AutoConfiguration

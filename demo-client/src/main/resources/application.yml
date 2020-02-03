@@ -1,0 +1,9 @@
+
+spring:
+  grpc:
+#    server:
+#      port: 8000
+    client:
+      demo-server:
+        host: localhost
+        port: 9000

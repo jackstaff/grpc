@@ -1,4 +1,4 @@
-package org.jackstaff.grpc;
+package org.jackstaff.grpc.exception;
 
 /**
  * @author reco@jackstaff.org

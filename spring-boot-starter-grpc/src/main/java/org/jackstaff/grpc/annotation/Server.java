@@ -1,6 +1,8 @@
-package org.jackstaff.grpc;
+package org.jackstaff.grpc.annotation;
 
+import org.jackstaff.grpc.interceptor.Interceptor;
 import org.springframework.core.annotation.AliasFor;
+import org.springframework.stereotype.Component;
 
 import java.lang.annotation.*;
 
@@ -11,6 +13,7 @@ import java.lang.annotation.*;
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})
+@Component
 public @interface Server {
 
     @AliasFor("value")
