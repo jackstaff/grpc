@@ -9,6 +9,9 @@ import io.grpc.stub.MetadataUtils;
 
 import java.util.Optional;
 
+/**
+ * @author reco@jackstaff.org
+ */
 public class HeaderMetadata<T> {
 
     private final Metadata.Key<T> key;
