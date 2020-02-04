@@ -21,6 +21,18 @@ public final class Packet<T> implements Completable, Command {
         this.payload = payload;
     }
 
+    static Packet<?> throwable(Throwable ex){
+        return new Packet<>(EXCEPTION, ex);
+    }
+
+    static Packet<?> message(Object value){
+        return new Packet<>(MESSAGE, value);
+    }
+
+    boolean isException(){
+        return command == EXCEPTION;
+    }
+
     @Override
     public boolean isCompleted() {
         return command >= COMPLETED_RANGE_MIN && command <= COMPLETED_RANGE_MAX;

@@ -1,6 +1,7 @@
 package org.jackstaff.grpc.internal;
 
 import io.grpc.stub.StreamObserver;
+import org.jackstaff.grpc.Context;
 import org.jackstaff.grpc.Packet;
 
 /**

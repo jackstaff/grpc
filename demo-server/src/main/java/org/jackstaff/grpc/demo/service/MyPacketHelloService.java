@@ -1,7 +1,7 @@
 package org.jackstaff.grpc.demo.service;
 
 import org.jackstaff.grpc.Packet;
-import org.jackstaff.grpc.PacketConsumer;
+import org.jackstaff.grpc.MessageConsumer;
 import org.jackstaff.grpc.annotation.Server;
 import org.jackstaff.grpc.demo.HelloRequest;
 import org.jackstaff.grpc.demo.HelloResponse;
@@ -37,9 +37,8 @@ public class MyPacketHelloService implements PacketHelloService {
     @Override
     public void lotsOfReplies(String greeting, Consumer<Packet<HelloResponse>> replies) {
         logger.info("PacketHelloService.lotsOfReplies receive: {}",  greeting);
-        PacketConsumer<HelloResponse> packetConsumer = (PacketConsumer<HelloResponse>) replies;
         for (int i = 0; i < greeting.length(); i++) {
-            packetConsumer.messageOrComplete(i< greeting.length()-1, new HelloResponse(i+":"+greeting.charAt(i)));
+            replies.accept(new Packet<>(i< greeting.length()-1 ? Packet.MESSAGE : Packet.COMPLETED, new HelloResponse(i+":"+greeting.charAt(i))));
         }
     }
 
@@ -54,7 +53,7 @@ public class MyPacketHelloService implements PacketHelloService {
     @Override
     public Consumer<Packet<HelloRequest>> bidiHello(SocialInfo socialInfo, Consumer<Packet<HelloResponse>> replies) {
         logger.info("MyPacketHelloService.bidiHello receive: {}", socialInfo);
-        PacketConsumer<HelloResponse> packetConsumer = (PacketConsumer<HelloResponse>) replies;
+        MessageConsumer<Packet<HelloResponse>> messageConsumer = (MessageConsumer<Packet<HelloResponse>>) replies;
         List<String> friends = socialInfo.getFriends();
         if (friends != null){
             ScheduledExecutorService schedule = Executors.newSingleThreadScheduledExecutor();
@@ -64,11 +63,11 @@ public class MyPacketHelloService implements PacketHelloService {
                 packet.setPayload(new HelloResponse("hi,"+friends.get(index)));
                 packet.setCommand(i < friends.size()-1 ? Packet.MESSAGE : Packet.COMPLETED);
                 schedule.schedule(()->{
-                    if (packetConsumer.isClosed()){
+                    if (messageConsumer.isClosed()){
                         logger.info("bidiHello replies consumer closed "+index);
                         return;
                     }
-                    packetConsumer.accept(packet);
+                    messageConsumer.accept(packet);
                 }, index+1, TimeUnit.SECONDS);
             }
         }

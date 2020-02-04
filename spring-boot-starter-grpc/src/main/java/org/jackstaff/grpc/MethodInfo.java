@@ -1,7 +1,7 @@
 package org.jackstaff.grpc;
 
-import io.grpc.Internal;
-import org.jackstaff.grpc.annotation.Asynchronous;
+import org.jackstaff.grpc.annotation.AsynchronousUnary;
+import org.jackstaff.grpc.exception.ValidationException;
 import org.jackstaff.grpc.interceptor.Interceptor;
 
 import java.lang.reflect.Method;
@@ -13,8 +13,7 @@ import java.util.stream.IntStream;
 /**
  * @author reco@jackstaff.org
  */
-@Internal
-public class MethodInfo {
+class MethodInfo {
 
     private Object bean;
     private Class<?> type;
@@ -31,28 +30,29 @@ public class MethodInfo {
 
     public MethodInfo(Object bean, Class<?> type, Method method, List<Interceptor> interceptors) {
         if (!type.isInterface()){
-            throw new RuntimeException("invalid type "+type.getName() +" MUST be interface");
+            throw new ValidationException("invalid type "+type.getName() +" MUST be interface");
         }
         this.bean = bean;
         this.type = type;
         this.method = method;
         this.interceptors = Optional.ofNullable(interceptors).orElseGet(ArrayList::new);
         String name = type.getName()+"/" + method.toString();
-        this.sign = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8))+":"+name.hashCode();
+        this.sign = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8))+"-"+Math.abs(name.hashCode());
         this.mode = checkMode();
-        if (!isInvalid()){
-            Asynchronous async = method.getAnnotation(Asynchronous.class);
-            if (async != null){
-                if (mode == Mode.Unary && method.getReturnType().equals(Void.TYPE)){
-                    this.mode = Mode.AsynchronousUnary;
-                    return;
-                }
-                this.error = method +" @Asynchronous Only for Unary Call & void return";
-                this.mode = Mode.Invalid;
+        if (!isInvalid() && method.getAnnotation(AsynchronousUnary.class) != null){
+//            if (mode == Mode.ServerStreaming){
+//                this.mode = Mode.UnaryStreaming;
+//                return;
+//            }
+            if (mode == Mode.Unary && method.getReturnType().equals(Void.TYPE)){
+                this.mode = Mode.UnaryAsynchronous;
+                return;
             }
+            this.error = method +" @Asynchronous Only for Unary Call & void return";
+            this.mode = Mode.Invalid;
         }
         if (isInvalid()){
-            throw new RuntimeException(error);
+            throw new ValidationException(error);
         }
     }
 

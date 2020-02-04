@@ -1,6 +1,6 @@
 package org.jackstaff.grpc;
 
-import org.jackstaff.grpc.exception.GrpcException;
+import org.jackstaff.grpc.exception.StatusException;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -10,12 +10,17 @@ import java.util.function.Consumer;
  */
 public class MessageConsumer<T> implements Consumer<T> {
 
-    private AtomicInteger closed;
+    private final AtomicInteger closed;
     private final Consumer<T> consumer;
 
     public MessageConsumer(Consumer<T> consumer) {
         this.consumer = consumer;
         this.closed = new AtomicInteger(0);
+    }
+
+    MessageConsumer(Consumer<T> consumer, MessageConsumer<?> another) {
+        this.consumer = consumer;
+        this.closed = another.closed;
     }
 
     public boolean isClosed() {
@@ -31,7 +36,7 @@ public class MessageConsumer<T> implements Consumer<T> {
     @Override
     public void accept(T t) {
         if (isClosed()) {
-            throw new GrpcException("streaming closed");
+            throw new StatusException("closed");
         }
         consumer.accept(t);
         if (t instanceof Completable && ((Completable) t).isCompleted()) {

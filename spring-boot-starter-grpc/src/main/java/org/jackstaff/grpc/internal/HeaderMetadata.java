@@ -14,6 +14,9 @@ import java.util.Optional;
  */
 public class HeaderMetadata<T> {
 
+    public static final String AUTHORITY = "authority";
+    public static final String REMOTE_ADDR = "remote-addr";
+
     private final Metadata.Key<T> key;
     private Context.Key<Metadata> contextKey;
     private Context context;
@@ -22,9 +25,7 @@ public class HeaderMetadata<T> {
         this.key = key;
     }
 
-    public static HeaderMetadata<String> METHOD_SIGN = string("x-jackstaff-method-sign");
-
-    public static HeaderMetadata<String> ROOT = string("x-jackstaff-grpc");
+    public static HeaderMetadata<String> ROOT = string("jackstaff-grpc");
 
     public static HeaderMetadata<String> string(String name) {
         return new HeaderMetadata<>(stringKey(name));
@@ -81,9 +82,9 @@ public class HeaderMetadata<T> {
     public Context capture(String authority, Attributes attributes, Metadata headers){
         Metadata metadata = new Metadata();
         Optional.ofNullable(authority).filter(a->!a.isEmpty()).
-                ifPresent(a->metadata.put(stringKey("authority"), authority));
+                ifPresent(a->metadata.put(stringKey(AUTHORITY), authority));
         Optional.ofNullable(attributes.get(Grpc.TRANSPORT_ATTR_REMOTE_ADDR)).map(Object::toString).
-                ifPresent(addr->metadata.put(stringKey("remote-addr"), addr));
+                ifPresent(addr->metadata.put(stringKey(REMOTE_ADDR), addr));
         metadata.merge(headers);
         if (this.context ==null) synchronized (this) {
             this.contextKey = Context.keyWithDefault(ROOT.key.name(), new Metadata());

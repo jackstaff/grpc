@@ -2,6 +2,7 @@ package org.jackstaff.grpc.demo.service;
 
 import org.jackstaff.grpc.annotation.Client;
 import org.jackstaff.grpc.demo.*;
+import org.jackstaff.grpc.demo.common.interceptor.Credential;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -16,7 +17,7 @@ public class ClientService {
 
     Logger logger = LoggerFactory.getLogger(ClientService.class);
 
-    @Client(Constant.DEMO_SERVER)
+    @Client(value = Constant.DEMO_SERVER, interceptor = Credential.class)
     private HelloService helloService;
 
 //    @Client(Constant.DEMO_SERVER)
@@ -32,6 +33,8 @@ public class ClientService {
         logger.info("........helloService..........");
         String reply = helloService.sayHello("hello world.");
         logger.info("sayHello..result {}", reply);
+        String s  = helloService.deny("the message");
+        logger.info("never here, since deny call will throw exception.");
     }
 
     public void walkThrough(){

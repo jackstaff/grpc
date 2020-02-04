@@ -3,7 +3,10 @@ package org.jackstaff.grpc;
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
 import org.jackstaff.grpc.annotation.Client;
 import org.jackstaff.grpc.configuration.Configuration;
+import org.jackstaff.grpc.exception.ValidationException;
 import org.jackstaff.grpc.interceptor.Interceptor;
+import org.jackstaff.grpc.internal.HeaderMetadata;
+import org.jackstaff.grpc.internal.PacketObserver;
 import org.jackstaff.grpc.internal.PacketStub;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +17,7 @@ import org.springframework.stereotype.Component;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * @author reco@jackstaff.org
@@ -55,10 +59,10 @@ public class PacketClient {
     private void autowired(String name, Object bean, Field field, Client client) {
         String authority = Optional.of(client.authority()).filter(a->!a.isEmpty()).orElseGet(client::value);
         if (authority.isEmpty()){
-            throw new RuntimeException(field+"@Client value/authority is empty");
+            throw new ValidationException(field+"@Client value/authority is empty");
         }
         if (!field.getType().isInterface()){
-            throw new RuntimeException(field+"@Client field MUST be interface");
+            throw new ValidationException(field+"@Client field MUST be interface");
         }
         field.setAccessible(true);
         try {
@@ -67,7 +71,7 @@ public class PacketClient {
                 field.set(bean, value);
             }
         }catch (Throwable ex){
-            throw new RuntimeException("@Client field autowired fail", ex);
+            throw new ValidationException("@Client field autowired fail", ex);
         }
     }
 
@@ -82,7 +86,7 @@ public class PacketClient {
         PacketStub<?> packetStub = stubs.get(authority);
         if (packetStub ==null){
             if (required){
-                throw new RuntimeException("client "+authority+" NOT found in configuration: spring.grpc.client..");
+                throw new ValidationException("client "+authority+" NOT found in configuration: spring.grpc.client..");
             }
             return null;
         }
@@ -96,37 +100,51 @@ public class PacketClient {
                 }
             }
             MethodInfo info = methods.computeIfAbsent(type+"/"+method, k-> new MethodInfo(type, method));
-            PacketStub<?> stub = new PacketStub<>(packetStub, info.getMode());
-            Context.setCurrent(new Context(stub, info, args, proxy));
+            PacketStub<?> stub = new PacketStub<>(packetStub, info.getMode()==Mode.Unary);
+            stub.attach(HeaderMetadata.ROOT, info.getSign());
+            Context context =new Context(appContext, stub, info, args, proxy);
+            Context.setCurrent(context);
             try {
-                return stubCall(info, stub);
+                Packet<?> packet = Utils.before(context, interceptors);
+                if (!packet.isException()){
+                    packet  = stubCall(context, stub);
+                    Utils.after(context, interceptors, packet);
+                }
+                if (packet.isException()){
+                    throw (Exception)packet.getPayload();
+                }
+                return packet.getPayload();
             }finally {
-                Context.reset();
+                Context.remove(context);
             }
         });
         return (T)bean;
     }
 
-    private Object stubCall(MethodInfo info, PacketStub<?> stub) throws Exception {
+    private Packet<?> stubCall(Context context, PacketStub<?> stub) throws Exception {
         Packet<Object[]> packet = new Packet<>();
-        Packet<?> result;
-        Object[] arguments = Arrays.stream(Context.current().getArguments()).map(a-> a != null ? a: new Object()).toArray();
+        Object[] arguments = Arrays.stream(context.getArguments()).map(a-> a == null || a instanceof Consumer ? new Object() : a).toArray();
         packet.setPayload(arguments);
-        switch (info.getMode()){
-            case Unary:
-                result = stub.unary(packet);
-                if (result.getCommand() == Command.EXCEPTION){
-                    throw (Exception) result.getPayload();
-                }
-                return result.getPayload();
-            case AsynchronousUnary:
-                stub.asynchronousUnary(packet, null);
-                return null;
-            case BiStreaming:
-            case ClientStreaming:
-            case ServerStreaming:
+        Mode mode = context.getMethodInfo().getMode();
+        try {
+            switch (mode){
+                case Unary:
+                    return stub.unary(packet);
+                case UnaryAsynchronous:
+                    stub.asynchronousUnary(packet);
+                    return new Packet<>();
+                case UnaryStreaming:
+                    //stub.unaryStreaming(packet, new PacketObserver());
+                    return new Packet<>();
+                case ServerStreaming:
+
+                case ClientStreaming:
+                case BiStreaming:
+            }
+        }catch (Exception ex){
+            return Packet.throwable(ex);
         }
-        return null;
+        return new Packet<>();
     }
 
 

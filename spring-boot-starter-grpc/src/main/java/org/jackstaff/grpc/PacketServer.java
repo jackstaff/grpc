@@ -4,7 +4,7 @@ import io.grpc.*;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
 import org.jackstaff.grpc.configuration.Configuration;
-import org.jackstaff.grpc.exception.GrpcException;
+import org.jackstaff.grpc.exception.ValidationException;
 import org.jackstaff.grpc.interceptor.Interceptor;
 import org.jackstaff.grpc.internal.HeaderMetadata;
 import org.jackstaff.grpc.internal.PacketServerGrpc;
@@ -43,7 +43,7 @@ public class PacketServer extends PacketServerGrpc {
                 org.jackstaff.grpc.annotation.Server server =bean.getClass().getAnnotation(org.jackstaff.grpc.annotation.Server.class);
                 Class<?>[] services =Optional.of(server.service()).filter(a->a.length>0).orElseGet(server::value);
                 if (services.length ==0){
-                    throw new RuntimeException(bean.getClass().getName()+ "@Server service is empty");
+                    throw new ValidationException(bean.getClass().getName()+ "@Server service is empty");
                 }
                 Arrays.stream(services).forEach(type->register((Class<Object>)type, bean, Utils.getInterceptors(server.interceptor())));
             });
@@ -53,7 +53,7 @@ public class PacketServer extends PacketServerGrpc {
 
     public <T> void register(Class<T> type, T bean, List<Interceptor> interceptors) {
         if (!type.isAssignableFrom(bean.getClass())){
-            throw new RuntimeException(bean.getClass().getName()+ "@Server service is NOT match");
+            throw new ValidationException(bean.getClass().getName()+ "@Server service is NOT match");
         }
         logger.info("Packet Server register(@Server)..{}, {}", type.getName(), bean.getClass().getName());
         Arrays.stream(type.getMethods()).map(method -> new MethodInfo(bean, type, method, interceptors)).
@@ -67,7 +67,7 @@ public class PacketServer extends PacketServerGrpc {
             logger.info("Packet Server Start at port {}", cfg.getPort());
             grpcServer.start();
         } catch (IOException e) {
-            logger.error( " Packet Server Start fail ", e);
+            logger.error(" Packet Server Start fail ", e);
             e.printStackTrace();
         }
     }
@@ -82,40 +82,44 @@ public class PacketServer extends PacketServerGrpc {
             @Override
             public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(ServerCall<ReqT, RespT> call,
                                                                          final Metadata headers, ServerCallHandler<ReqT, RespT> next) {
-                try {
-                    Context.setCurrent(null);
-                    return Contexts.interceptCall(HeaderMetadata.ROOT.capture(call.getAuthority(), call.getAttributes(), headers), call, headers, next);
-                }finally {
-                    Context.reset();
-                }
+                return Contexts.interceptCall(HeaderMetadata.ROOT.capture(call.getAuthority(), call.getAttributes(), headers), call, headers, next);
             }
         });
     }
 
-    private MethodInfo validate(Packet<?> packet){
-        String sign = HeaderMetadata.METHOD_SIGN.getValue();
+    private Context validate(Packet<?> packet){
+        String sign = HeaderMetadata.ROOT.getValue();
         if (sign == null || sign.isEmpty()){
-            throw new GrpcException("method sign Not found");
+            throw new ValidationException("method sign Not found");
         }
         MethodInfo info = methods.get(sign);
         if (info ==null){
-            throw new GrpcException("method Not found");
+            throw new ValidationException("method Not found");
         }
         Object[] args = Arrays.stream((Object[]) packet.getPayload()).map(a->a ==null || a.getClass().equals(Object.class) ? null : a).toArray();
-        Context.setCurrent(new Context(info, args, info.getBean()));
-        return info;
+        return new Context(appContext, info, args, info.getBean());
     }
 
     @Override
     protected void unaryImpl(Packet<?> packet, StreamObserver<Packet<?>> observer) {
+        Context context=null;
         try {
-            MethodInfo info = validate(packet);
-            Packet<Object> result = Utils.invoke(Context.current(), info.getInterceptors());
-            observer.onNext(result);
+            context = validate(packet);
+            MethodInfo info = context.getMethodInfo();
+            if (info.getMode() != Mode.UnaryStreaming) {
+                Packet<?> result = Utils.walkThrough(context, info.getInterceptors());
+                observer.onNext(result);
+                observer.onCompleted();
+            }else {
+                //
+            }
         }catch (Exception ex){
             observer.onNext(new Packet<>(Command.EXCEPTION, ex));
+            observer.onCompleted();
         }
-        observer.onCompleted();
+        finally {
+            Optional.ofNullable(context).ifPresent(Context::remove);
+        }
     }
 
     @Override

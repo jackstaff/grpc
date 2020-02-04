@@ -4,7 +4,6 @@ import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.StreamObserver;
-import org.jackstaff.grpc.Mode;
 import org.jackstaff.grpc.Packet;
 import org.jackstaff.grpc.internal.InternalGrpc.InternalBlockingStub;
 import org.jackstaff.grpc.internal.InternalGrpc.InternalStub;
@@ -30,10 +29,10 @@ public class PacketStub<S extends AbstractStub<S>> {
     }
 
     @SuppressWarnings("unchecked")
-    public PacketStub(PacketStub<?> another, Mode mode) {
+    public PacketStub(PacketStub<?> another, boolean block) {
         this.authority = another.authority;
         this.channel = another.channel;
-        this.stub = (S)(mode == Mode.Unary ? another.blockingStub : another.asyncStub);
+        this.stub = (S)(block ? another.blockingStub : another.asyncStub);
     }
 
     public <T> void attach(HeaderMetadata<T> metadata, T value){
@@ -64,7 +63,11 @@ public class PacketStub<S extends AbstractStub<S>> {
         return Transform.fromProtoIterator(((InternalBlockingStub)stub).serverStreaming(Transform.buildProto(packet)));
     }
 
-    public void asynchronousUnary(Packet<?> packet, StreamObserver<Packet<?>> observer) {
+    public void asynchronousUnary(Packet<?> packet) {
+        ((InternalStub)stub).unary(Transform.buildProto(packet), Transform.buildProtoObserver(null));
+    }
+
+    public void unaryStreaming(Packet<?> packet, StreamObserver<Packet<?>> observer) {
         ((InternalStub)stub).unary(Transform.buildProto(packet), Transform.buildProtoObserver(observer));
     }
 

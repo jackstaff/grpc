@@ -1,9 +1,10 @@
 package org.jackstaff.grpc;
 
-import org.jackstaff.grpc.exception.GrpcException;
+import org.jackstaff.grpc.exception.RecalledException;
 import org.jackstaff.grpc.interceptor.Interceptor;
 import org.springframework.beans.BeanUtils;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -18,44 +19,67 @@ class Utils {
         return Arrays.stream(types).map(BeanUtils::instantiateClass).collect(Collectors.toList());
     }
 
-    public static Packet<Object> invoke(Context context, List<Interceptor> interceptors) throws Exception {
-        Exception exception = null;
+    public static Packet<?> before(Context context, List<Interceptor> interceptors) {
         for (int i = 0; i < interceptors.size(); i++) {
+            Exception exception;
             try {
-                if (!interceptors.get(i).before(context)){
-                    exception = new GrpcException(interceptors.get(i).name() +" interceptor recall");
+                if (interceptors.get(i).before(context)){
+                    continue;
                 }
-            }catch (Exception ex0){
-                exception = ex0;
+                exception = new RecalledException(interceptors.get(i).getClass().getName());
+            }catch (RuntimeException ex){
+                exception = ex;
+            }catch (Exception e){
+                exception = new RecalledException(" interceptor recall", e);
             }
-            if (exception != null){
-                for (int j = i-1; j >= 0 ; j--) {
-                    interceptors.get(j).recall(context);
+            for (int j = i-1; j >= 0 ; j--) {
+                try {
+                    interceptors.get(j).recall(context, exception);
+                }catch (Exception ex){
+                    ex.printStackTrace();
                 }
-                return new Packet<>(Command.EXCEPTION, exception);
             }
+            return Packet.throwable(exception);
         }
-        Object result = null;
+        return new Packet<>();
+    }
+
+    public static Packet<?> invoke(Object target, Method method, Object[] args) {
+        Object result;
         try {
-            if (context.getArguments() ==null || context.getArguments().length ==0){
-                result = context.getMethod().invoke(context.getTarget());
+            if (args ==null || args.length ==0){
+                result = method.invoke(target);
             }else {
-                result = context.getMethod().invoke(context.getTarget(), context.getArguments());
+                result = method.invoke(target, args);
             }
-        } catch (Exception ex0) {
-            exception = ex0;
+            return Packet.message(result);
+        } catch (Exception ex) {
+            return Packet.throwable(ex);
         }
-        for (int i = interceptors.size()-1; i >=0 ; i--) {
-            if (exception ==null) {
-                interceptors.get(i).returning(context, result);
-            }else {
-                interceptors.get(i).throwing(context, exception);
+    }
+
+    public static void after(Context context, List<Interceptor> interceptors, Packet<?> packet) {
+        try {
+            for (int i = interceptors.size()-1; i >=0 ; i--) {
+                if (packet.isException()) {
+                    interceptors.get(i).throwing(context, (Exception) packet.getPayload());
+                }else {
+                    interceptors.get(i).returning(context, packet.getPayload());
+                }
             }
+        }catch (Exception ex){
+            ex.printStackTrace();
         }
-        if (exception != null){
-            return new Packet<>(Command.EXCEPTION, exception);
+    }
+
+    public static Packet<?> walkThrough(Context context, List<Interceptor> interceptors) {
+        Packet<?> packet = before(context, interceptors);
+        if (packet.isException()){
+            return packet;
         }
-        return new Packet<>(Command.MESSAGE, result);
+        Packet<?> result = invoke(context.getTarget(), context.getMethod(), context.getArguments());
+        after(context, interceptors, result);
+        return result;
     }
 
 }

@@ -1,9 +1,10 @@
 package org.jackstaff.grpc;
 
-public enum Mode {
+enum Mode {
     Invalid,
     Unary,
-    AsynchronousUnary,
+    UnaryAsynchronous,
+    UnaryStreaming,
     ClientStreaming,
     ServerStreaming,
     BiStreaming,

@@ -15,17 +15,6 @@ public class MyCompletableHelloService implements CompletableHelloService {
 
     Logger logger = LoggerFactory.getLogger(MyCompletableHelloService.class);
 
-
-    @Override
-    public void postMessage(String message) {
-
-    }
-
-    @Override
-    public String sayHello(String greeting) {
-        return null;
-    }
-
     @Override
     public void lotsOfReplies(String greeting, Consumer<CompletableHelloResponse> replies) {
 

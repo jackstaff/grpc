@@ -8,6 +8,7 @@ import io.protostuff.runtime.DefaultIdStrategy;
 import io.protostuff.runtime.IdStrategy;
 import io.protostuff.runtime.RuntimeSchema;
 import org.jackstaff.grpc.Packet;
+import org.jackstaff.grpc.exception.SerializationException;
 
 import java.util.Iterator;
 import java.util.Optional;
@@ -17,7 +18,7 @@ import java.util.Optional;
  */
 public class Transform {
 
-    private static final DefaultIdStrategy idStrategy= new DefaultIdStrategy(
+    private static final IdStrategy idStrategy= new DefaultIdStrategy(
             IdStrategy.DEFAULT_FLAGS | IdStrategy.ALLOW_NULL_ARRAY_ELEMENT |
             IdStrategy.MORPH_NON_FINAL_POJOS | IdStrategy.COLLECTION_SCHEMA_ON_REPEATED_FIELDS);
 
@@ -29,14 +30,22 @@ public class Transform {
     }
 
     static InternalProto.Packet buildProto(Packet<?> packet) {
-        byte[] bytes = ProtostuffIOUtil.toByteArray(packet, schema, LinkedBuffer.allocate());
-        return InternalProto.Packet.newBuilder().setData(ByteString.copyFrom(bytes)).build();
+        try {
+            byte[] bytes = ProtostuffIOUtil.toByteArray(packet, schema, LinkedBuffer.allocate());
+            return InternalProto.Packet.newBuilder().setData(ByteString.copyFrom(bytes)).build();
+        }catch (Exception ex){
+            throw new SerializationException("build Protobuf fail", ex);
+        }
     }
 
     static <T> Packet<T> fromProto(InternalProto.Packet proto){
-        Packet<T> packet = new Packet<>();
-        ProtostuffIOUtil.mergeFrom(proto.getData().toByteArray(), packet, schema);
-        return packet;
+        try {
+            Packet<T> packet = new Packet<>();
+            ProtostuffIOUtil.mergeFrom(proto.getData().toByteArray(), packet, schema);
+            return packet;
+        }catch (Exception ex){
+            throw new SerializationException("from Protobuf fail", ex);
+        }
     }
 
     static StreamObserver<InternalProto.Packet> buildProtoObserver(StreamObserver<Packet<?>> observer){
@@ -61,35 +70,19 @@ public class Transform {
     }
 
     static StreamObserver<Packet<?>> fromProtoObserver(StreamObserver<InternalProto.Packet> observer) {
-        return new StreamObserver<Packet<?>>(){
-
-            @Override
-            public void onNext(Packet<?> value) {
-                observer.onNext(buildProto(value));
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                observer.onError(t);
-            }
-
-            @Override
-            public void onCompleted() {
-                observer.onCompleted();
-            }
-        };
+        return new PacketObserver(observer);
     }
 
     static Iterator<Packet<?>> fromProtoIterator(Iterator<InternalProto.Packet> iterator){
         return new Iterator<Packet<?>>() {
             @Override
             public boolean hasNext() {
-                return iterator.hasNext();
+                return Optional.ofNullable(iterator).map(Iterator::hasNext).orElse(false);
             }
 
             @Override
             public Packet<?> next() {
-                return fromProto(iterator.next());
+                return Optional.ofNullable(iterator).map(it->fromProto(it.next())).orElse(null);
             }
         };
     }

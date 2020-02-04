@@ -5,6 +5,8 @@ import org.jackstaff.grpc.demo.HelloRequest;
 import org.jackstaff.grpc.demo.HelloResponse;
 import org.jackstaff.grpc.demo.HelloService;
 import org.jackstaff.grpc.demo.SocialInfo;
+import org.jackstaff.grpc.demo.common.interceptor.Authorization;
+import org.jackstaff.grpc.demo.common.interceptor.LoggerInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 
-@Server(HelloService.class)
+@Server(service = HelloService.class, interceptor = {LoggerInfo.class, Authorization.class})
 public class MyHelloService implements HelloService {
 
     Logger logger = LoggerFactory.getLogger(MyHelloService.class);
@@ -30,6 +32,12 @@ public class MyHelloService implements HelloService {
         logger.info("for test @Asynchronous, i will sleep 1 minute.....start...");
         LockSupport.parkNanos(TimeUnit.MINUTES.toNanos(1));
         logger.info("...end...wake up..");
+    }
+
+//    @Override
+    public void postMessage(String message, Consumer<Boolean> result) {
+        logger.info("MyHelloService.postMessage receive: {}", message);
+        result.accept(message.length()>5);
     }
 
     @Override
@@ -68,6 +76,12 @@ public class MyHelloService implements HelloService {
         return helloRequest -> {
             logger.info("MyHelloService.bidiHello receive bidi streaming, helloRequest:{}",helloRequest);
         };
+    }
+
+    @Override
+    public String deny(String message) {
+        logger.info("never here, since recalled by Authorization Interceptor");
+        return "it never happen";
     }
 
 }

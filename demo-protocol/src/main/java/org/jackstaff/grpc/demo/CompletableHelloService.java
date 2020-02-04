@@ -1,15 +1,10 @@
 package org.jackstaff.grpc.demo;
 
-import org.jackstaff.grpc.annotation.Asynchronous;
+import org.jackstaff.grpc.annotation.AsynchronousUnary;
 
 import java.util.function.Consumer;
 
 public interface CompletableHelloService {
-
-    @Asynchronous
-    void postMessage(String message); //Asynchronous Unary RPCs
-
-    String sayHello(String greeting); //Unary RPCs
 
     void lotsOfReplies(String greeting, Consumer<CompletableHelloResponse> replies);//Server streaming RPCs
 

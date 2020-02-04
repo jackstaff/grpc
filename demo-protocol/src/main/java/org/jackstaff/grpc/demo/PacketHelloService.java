@@ -1,6 +1,6 @@
 package org.jackstaff.grpc.demo;
 
-import org.jackstaff.grpc.annotation.Asynchronous;
+import org.jackstaff.grpc.annotation.AsynchronousUnary;
 import org.jackstaff.grpc.Packet;
 
 import java.util.function.Consumer;
@@ -8,7 +8,7 @@ import java.util.function.Consumer;
 public interface PacketHelloService {
 
 
-    @Asynchronous
+    @AsynchronousUnary
     void postMessage(String message); //Asynchronous Unary RPCs
 
     String sayHello(String greeting); //Unary RPCs
