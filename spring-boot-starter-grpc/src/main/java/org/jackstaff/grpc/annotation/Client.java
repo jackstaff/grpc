@@ -1,6 +1,6 @@
 package org.jackstaff.grpc.annotation;
 
-import org.jackstaff.grpc.interceptor.Interceptor;
+import org.jackstaff.grpc.Interceptor;
 import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.*;

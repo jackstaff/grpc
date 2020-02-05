@@ -26,6 +26,7 @@ public class HeaderMetadata<T> {
     }
 
     public static HeaderMetadata<String> ROOT = string("jackstaff-grpc");
+    public static HeaderMetadata<byte[]> BINARY_ROOT = binary("jackstaff-grpc-bin");
 
     public static HeaderMetadata<String> string(String name) {
         return new HeaderMetadata<>(stringKey(name));

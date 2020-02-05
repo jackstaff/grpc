@@ -14,30 +14,16 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 
 @Server(service = HelloService.class, interceptor = {LoggerInfo.class, Authorization.class})
 public class MyHelloService implements HelloService {
 
     Logger logger = LoggerFactory.getLogger(MyHelloService.class);
+    ScheduledExecutorService schedule =Executors.newSingleThreadScheduledExecutor();
 
     public MyHelloService() {
         logger.info("MyHelloService..........CREATE......."+System.identityHashCode(this));
-    }
-
-    @Override
-    public void postMessage(String message) {
-        logger.info("MyHelloService.postMessage receive: {}", message);
-        logger.info("for test @Asynchronous, i will sleep 1 minute.....start...");
-        LockSupport.parkNanos(TimeUnit.MINUTES.toNanos(1));
-        logger.info("...end...wake up..");
-    }
-
-//    @Override
-    public void postMessage(String message, Consumer<Boolean> result) {
-        logger.info("MyHelloService.postMessage receive: {}", message);
-        result.accept(message.length()>5);
     }
 
     @Override
@@ -67,7 +53,6 @@ public class MyHelloService implements HelloService {
         logger.info("MyHelloService.bidiHello receive: {}", socialInfo);
         List<String> friends = socialInfo.getFriends();
         if (friends != null){
-            ScheduledExecutorService schedule =Executors.newSingleThreadScheduledExecutor();
             for (int i = 0; i < friends.size(); i++) {
                 int index = i;
                 schedule.schedule(()->replies.accept(new HelloResponse("hi,"+friends.get(index))), index+1, TimeUnit.SECONDS);
@@ -78,10 +63,5 @@ public class MyHelloService implements HelloService {
         };
     }
 
-    @Override
-    public String deny(String message) {
-        logger.info("never here, since recalled by Authorization Interceptor");
-        return "it never happen";
-    }
 
 }

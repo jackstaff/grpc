@@ -29,21 +29,42 @@ public class Transform {
         return idStrategy;
     }
 
+    public static byte[] toBinary(Packet<?> packet){
+        try {
+            return ProtostuffIOUtil.toByteArray(packet, schema, LinkedBuffer.allocate());
+        }catch (Exception ex){
+            throw new SerializationException("Packet toBinary fail", ex);
+        }
+    }
+
+    public static <T> Packet<T> fromBinary(byte[] bytes){
+        try {
+            Packet<T> packet = new Packet<>();
+            ProtostuffIOUtil.mergeFrom(bytes, packet, schema);
+            return packet;
+        }catch (Exception ex){
+            throw new SerializationException("Packet fromBinary fail", ex);
+        }
+    }
+
     static InternalProto.Packet buildProto(Packet<?> packet) {
         try {
-            byte[] bytes = ProtostuffIOUtil.toByteArray(packet, schema, LinkedBuffer.allocate());
-            return InternalProto.Packet.newBuilder().setData(ByteString.copyFrom(bytes)).build();
-        }catch (Exception ex){
+            return InternalProto.Packet.newBuilder().setData(ByteString.copyFrom(toBinary(packet))).build();
+        }catch (SerializationException ex){
+            throw ex;
+        }
+        catch (Exception ex){
             throw new SerializationException("build Protobuf fail", ex);
         }
     }
 
     static <T> Packet<T> fromProto(InternalProto.Packet proto){
         try {
-            Packet<T> packet = new Packet<>();
-            ProtostuffIOUtil.mergeFrom(proto.getData().toByteArray(), packet, schema);
-            return packet;
-        }catch (Exception ex){
+            return fromBinary(proto.getData().toByteArray());
+        }catch (SerializationException ex){
+            throw ex;
+        }
+        catch (Exception ex){
             throw new SerializationException("from Protobuf fail", ex);
         }
     }
@@ -70,11 +91,34 @@ public class Transform {
     }
 
     static StreamObserver<Packet<?>> fromProtoObserver(StreamObserver<InternalProto.Packet> observer) {
-        return new PacketObserver(observer);
+        abstract class X implements StreamObserver<Packet<?>>, Original<StreamObserver<InternalProto.Packet>>{}
+        return new X(){
+            @Override
+            public void onNext(Packet<?> value) {
+                Optional.ofNullable(observer).ifPresent(o->o.onNext(buildProto(value)));
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                Optional.ofNullable(observer).ifPresent(o->o.onError(t));
+            }
+
+            @Override
+            public void onCompleted() {
+                Optional.ofNullable(observer).ifPresent(StreamObserver::onCompleted);
+            }
+
+            @Override
+            public StreamObserver<InternalProto.Packet> getOrigin() {
+                return observer;
+            }
+        };
     }
 
     static Iterator<Packet<?>> fromProtoIterator(Iterator<InternalProto.Packet> iterator){
-        return new Iterator<Packet<?>>() {
+        abstract class X implements Iterator<Packet<?>>, Original<Iterator<InternalProto.Packet>>{}
+        return new X() {
+
             @Override
             public boolean hasNext() {
                 return Optional.ofNullable(iterator).map(Iterator::hasNext).orElse(false);
@@ -84,6 +128,12 @@ public class Transform {
             public Packet<?> next() {
                 return Optional.ofNullable(iterator).map(it->fromProto(it.next())).orElse(null);
             }
+
+            @Override
+            public Iterator<InternalProto.Packet> getOrigin() {
+                return iterator;
+            }
+
         };
     }
 

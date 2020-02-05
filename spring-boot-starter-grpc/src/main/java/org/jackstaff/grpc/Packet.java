@@ -1,5 +1,8 @@
 package org.jackstaff.grpc;
 
+import java.util.Arrays;
+import java.util.function.Consumer;
+
 /**
  * @author reco@jackstaff.org
  */
@@ -19,18 +22,6 @@ public final class Packet<T> implements Completable, Command {
     public Packet(int command, T payload) {
         this.command = command;
         this.payload = payload;
-    }
-
-    static Packet<?> throwable(Throwable ex){
-        return new Packet<>(EXCEPTION, ex);
-    }
-
-    static Packet<?> message(Object value){
-        return new Packet<>(MESSAGE, value);
-    }
-
-    boolean isException(){
-        return command == EXCEPTION;
     }
 
     @Override
@@ -53,5 +44,35 @@ public final class Packet<T> implements Completable, Command {
     public void setPayload(T payload) {
         this.payload = payload;
     }
+
+
+    boolean isException(){
+        return command == EXCEPTION;
+    }
+
+    static Packet<?> throwable(Throwable ex){
+        return new Packet<>(EXCEPTION, ex);
+    }
+
+    static Packet<?> ok(Object value){
+        return new Packet<>(OK, value);
+    }
+
+    static Packet<?> message(Object value){
+        return new Packet<>(MESSAGE, value);
+    }
+
+    static Packet<?> NULL() {
+        return new Packet<>();
+    }
+
+    Object[] unboxing(){
+        return Arrays.stream((Object[])payload).map(a->a ==null || a.getClass().equals(Object.class) ? null : a).toArray();
+    }
+
+    static Packet<Object[]> boxing(Object[] args){
+        return new Packet<>(Command.OK, Arrays.stream(args).map(a-> a == null || a instanceof Consumer ? new Object() : a).toArray());
+    }
+
 
 }

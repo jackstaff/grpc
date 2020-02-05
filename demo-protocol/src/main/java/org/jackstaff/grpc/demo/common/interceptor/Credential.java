@@ -1,19 +1,18 @@
 package org.jackstaff.grpc.demo.common.interceptor;
 
 import org.jackstaff.grpc.Context;
-import org.jackstaff.grpc.interceptor.Interceptor;
+import org.jackstaff.grpc.Interceptor;
 
 /**
  * @author reco@jackstaff.org
- * @see org.jackstaff.grpc.interceptor.Interceptor
+ * @see Interceptor
  * @see org.jackstaff.grpc.demo.common.interceptor.Authorization
  */
 public class Credential implements Interceptor {
 
     @Override
-    public boolean before(Context context) throws Exception {
+    public void before(Context context) throws Exception {
         context.setMetadata(Authorization.AUTHORIZATION, getCredential(context));
-        return true;
     }
 
     private String getCredential(Context context){

@@ -1,7 +1,4 @@
-package org.jackstaff.grpc.interceptor;
-
-
-import org.jackstaff.grpc.Context;
+package org.jackstaff.grpc;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -11,8 +8,7 @@ import javax.annotation.Nullable;
  */
 public interface Interceptor {
 
-    default boolean before(Context context) throws Exception {
-        return true;
+    default void before(Context context) throws Exception {
     }
 
     default void returning(Context context, @Nullable Object result) {

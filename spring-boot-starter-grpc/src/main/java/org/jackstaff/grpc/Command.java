@@ -3,9 +3,10 @@ package org.jackstaff.grpc;
 /**
  * @author reco@jackstaff.org
  */
-public interface Command {
+interface Command {
 
-    int MESSAGE = 0;
+    int OK = 0;
+    int MESSAGE = OK;
     int ERROR_MESSAGE = -1;
 
     int COMPLETED_RANGE_MIN =1;
@@ -16,6 +17,5 @@ public interface Command {
     int EXCEPTION = 4;
 
     int COMPLETED_RANGE_MAX =100;
-
 
 }

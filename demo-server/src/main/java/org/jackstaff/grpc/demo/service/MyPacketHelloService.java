@@ -1,7 +1,7 @@
 package org.jackstaff.grpc.demo.service;
 
 import org.jackstaff.grpc.Packet;
-import org.jackstaff.grpc.MessageConsumer;
+import org.jackstaff.grpc.MessageChannel;
 import org.jackstaff.grpc.annotation.Server;
 import org.jackstaff.grpc.demo.HelloRequest;
 import org.jackstaff.grpc.demo.HelloResponse;
@@ -23,11 +23,6 @@ public class MyPacketHelloService implements PacketHelloService {
 
     @Autowired
     private MyHelloService myHelloService;
-
-    @Override
-    public void postMessage(String message) {
-        myHelloService.postMessage(message);
-    }
 
     @Override
     public String sayHello(String greeting) {
@@ -53,7 +48,7 @@ public class MyPacketHelloService implements PacketHelloService {
     @Override
     public Consumer<Packet<HelloRequest>> bidiHello(SocialInfo socialInfo, Consumer<Packet<HelloResponse>> replies) {
         logger.info("MyPacketHelloService.bidiHello receive: {}", socialInfo);
-        MessageConsumer<Packet<HelloResponse>> messageConsumer = (MessageConsumer<Packet<HelloResponse>>) replies;
+        MessageChannel<Packet<HelloResponse>> messageChannel = (MessageChannel<Packet<HelloResponse>>) replies;
         List<String> friends = socialInfo.getFriends();
         if (friends != null){
             ScheduledExecutorService schedule = Executors.newSingleThreadScheduledExecutor();
@@ -63,11 +58,11 @@ public class MyPacketHelloService implements PacketHelloService {
                 packet.setPayload(new HelloResponse("hi,"+friends.get(index)));
                 packet.setCommand(i < friends.size()-1 ? Packet.MESSAGE : Packet.COMPLETED);
                 schedule.schedule(()->{
-                    if (messageConsumer.isClosed()){
+                    if (messageChannel.isClosed()){
                         logger.info("bidiHello replies consumer closed "+index);
                         return;
                     }
-                    messageConsumer.accept(packet);
+                    messageChannel.accept(packet);
                 }, index+1, TimeUnit.SECONDS);
             }
         }

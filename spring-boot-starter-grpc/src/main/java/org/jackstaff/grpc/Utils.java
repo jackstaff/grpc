@@ -1,7 +1,5 @@
 package org.jackstaff.grpc;
 
-import org.jackstaff.grpc.exception.RecalledException;
-import org.jackstaff.grpc.interceptor.Interceptor;
 import org.springframework.beans.BeanUtils;
 
 import java.lang.reflect.Method;
@@ -21,27 +19,20 @@ class Utils {
 
     public static Packet<?> before(Context context, List<Interceptor> interceptors) {
         for (int i = 0; i < interceptors.size(); i++) {
-            Exception exception;
             try {
-                if (interceptors.get(i).before(context)){
-                    continue;
+                interceptors.get(i).before(context);
+            }catch (Exception exception){
+                for (int j = i-1; j >= 0 ; j--) {
+                    try {
+                        interceptors.get(j).recall(context, exception);
+                    }catch (Exception ex){
+                        ex.printStackTrace();
+                    }
                 }
-                exception = new RecalledException(interceptors.get(i).getClass().getName());
-            }catch (RuntimeException ex){
-                exception = ex;
-            }catch (Exception e){
-                exception = new RecalledException(" interceptor recall", e);
+                return Packet.throwable(exception);
             }
-            for (int j = i-1; j >= 0 ; j--) {
-                try {
-                    interceptors.get(j).recall(context, exception);
-                }catch (Exception ex){
-                    ex.printStackTrace();
-                }
-            }
-            return Packet.throwable(exception);
         }
-        return new Packet<>();
+        return Packet.NULL();
     }
 
     public static Packet<?> invoke(Object target, Method method, Object[] args) {
@@ -52,7 +43,7 @@ class Utils {
             }else {
                 result = method.invoke(target, args);
             }
-            return Packet.message(result);
+            return Packet.ok(result);
         } catch (Exception ex) {
             return Packet.throwable(ex);
         }
@@ -74,12 +65,11 @@ class Utils {
 
     public static Packet<?> walkThrough(Context context, List<Interceptor> interceptors) {
         Packet<?> packet = before(context, interceptors);
-        if (packet.isException()){
-            return packet;
+        if (!packet.isException()){
+            packet = invoke(context.getTarget(), context.getMethod(), context.getArguments());
+            after(context, interceptors, packet);
         }
-        Packet<?> result = invoke(context.getTarget(), context.getMethod(), context.getArguments());
-        after(context, interceptors, result);
-        return result;
+        return packet;
     }
 
 }

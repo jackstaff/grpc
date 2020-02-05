@@ -2,7 +2,6 @@ package org.jackstaff.grpc;
 
 import org.jackstaff.grpc.annotation.AsynchronousUnary;
 import org.jackstaff.grpc.exception.ValidationException;
-import org.jackstaff.grpc.interceptor.Interceptor;
 
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -13,22 +12,22 @@ import java.util.stream.IntStream;
 /**
  * @author reco@jackstaff.org
  */
-class MethodInfo {
+class MethodDescriptor {
 
     private Object bean;
     private Class<?> type;
     private Method method;
     private List<Interceptor> interceptors;
     private Mode mode;
-    private int streamingIndex;
+    private int channelIndex;
     private String error;
     private String sign;
 
-    public MethodInfo(Class<?> type, Method method) {
+    public MethodDescriptor(Class<?> type, Method method) {
         this(null, type, method, null);
     }
 
-    public MethodInfo(Object bean, Class<?> type, Method method, List<Interceptor> interceptors) {
+    public MethodDescriptor(Object bean, Class<?> type, Method method, List<Interceptor> interceptors) {
         if (!type.isInterface()){
             throw new ValidationException("invalid type "+type.getName() +" MUST be interface");
         }
@@ -40,10 +39,10 @@ class MethodInfo {
         this.sign = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8))+"-"+Math.abs(name.hashCode());
         this.mode = checkMode();
         if (!isInvalid() && method.getAnnotation(AsynchronousUnary.class) != null){
-//            if (mode == Mode.ServerStreaming){
-//                this.mode = Mode.UnaryStreaming;
-//                return;
-//            }
+            if (mode == Mode.ServerStreaming){
+                this.mode = Mode.UnaryStreaming;
+                return;
+            }
             if (mode == Mode.Unary && method.getReturnType().equals(Void.TYPE)){
                 this.mode = Mode.UnaryAsynchronous;
                 return;
@@ -65,7 +64,7 @@ class MethodInfo {
                 return Mode.Unary;
             case 1:
                 Class<?>[] types = method.getParameterTypes();
-                streamingIndex =IntStream.range(0, types.length).filter(i->types[i].equals(Consumer.class)).sum();
+                channelIndex =IntStream.range(0, types.length).filter(i->types[i].equals(Consumer.class)).sum();
                 if (method.getReturnType().equals(Void.TYPE)) {
                     return Mode.ServerStreaming;
                 }
@@ -102,8 +101,12 @@ class MethodInfo {
         return error;
     }
 
-    public int getStreamingIndex() {
-        return streamingIndex;
+    public int getChannelIndex() {
+        return channelIndex;
+    }
+
+    Consumer<?> getChannel(Object[] args){
+        return (Consumer<?>) args[channelIndex];
     }
 
     public Object getBean() {
@@ -118,7 +121,7 @@ class MethodInfo {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        MethodInfo that = (MethodInfo) o;
+        MethodDescriptor that = (MethodDescriptor) o;
         return type.equals(that.type) && method.equals(that.method);
     }
 

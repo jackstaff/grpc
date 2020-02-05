@@ -5,9 +5,9 @@ import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
 import org.jackstaff.grpc.configuration.Configuration;
 import org.jackstaff.grpc.exception.ValidationException;
-import org.jackstaff.grpc.interceptor.Interceptor;
 import org.jackstaff.grpc.internal.HeaderMetadata;
 import org.jackstaff.grpc.internal.PacketServerGrpc;
+import org.jackstaff.grpc.internal.Transform;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * @author reco@jackstaff.org
@@ -28,7 +29,7 @@ public class PacketServer extends PacketServerGrpc {
 
     private final ApplicationContext appContext;
     private final Configuration configuration;
-    private final Map<String, MethodInfo> methods = new ConcurrentHashMap<>();
+    private final Map<String, MethodDescriptor> methods = new ConcurrentHashMap<>();
 
     private io.grpc.Server grpcServer;
 
@@ -56,7 +57,7 @@ public class PacketServer extends PacketServerGrpc {
             throw new ValidationException(bean.getClass().getName()+ "@Server service is NOT match");
         }
         logger.info("Packet Server register(@Server)..{}, {}", type.getName(), bean.getClass().getName());
-        Arrays.stream(type.getMethods()).map(method -> new MethodInfo(bean, type, method, interceptors)).
+        Arrays.stream(type.getMethods()).map(method -> new MethodDescriptor(bean, type, method, interceptors)).
                 forEach(info -> methods.put(info.getSign(), info));
     }
 
@@ -87,54 +88,91 @@ public class PacketServer extends PacketServerGrpc {
         });
     }
 
-    private Context validate(Packet<?> packet){
+    private Context buildContext(Packet<?> packet){
         String sign = HeaderMetadata.ROOT.getValue();
         if (sign == null || sign.isEmpty()){
             throw new ValidationException("method sign Not found");
         }
-        MethodInfo info = methods.get(sign);
+        MethodDescriptor info = methods.get(sign);
         if (info ==null){
             throw new ValidationException("method Not found");
         }
-        Object[] args = Arrays.stream((Object[]) packet.getPayload()).map(a->a ==null || a.getClass().equals(Object.class) ? null : a).toArray();
-        return new Context(appContext, info, args, info.getBean());
+        return new Context(appContext, info, packet.unboxing(), info.getBean());
     }
 
     @Override
     protected void unaryImpl(Packet<?> packet, StreamObserver<Packet<?>> observer) {
-        Context context=null;
         try {
-            context = validate(packet);
-            MethodInfo info = context.getMethodInfo();
-            if (info.getMode() != Mode.UnaryStreaming) {
-                Packet<?> result = Utils.walkThrough(context, info.getInterceptors());
-                observer.onNext(result);
-                observer.onCompleted();
-            }else {
-                //
+            Context context = buildContext(packet);
+            MethodDescriptor info = context.getMethodDescriptor();
+            if (info.getMode() == Mode.UnaryStreaming) {
+                serverStreamingImpl(packet, observer);
+                return;
             }
+            Packet<?> result = Utils.walkThrough(context, info.getInterceptors());
+            observer.onNext(result);
         }catch (Exception ex){
-            observer.onNext(new Packet<>(Command.EXCEPTION, ex));
-            observer.onCompleted();
+            observer.onNext(Packet.throwable(ex));
         }
-        finally {
-            Optional.ofNullable(context).ifPresent(Context::remove);
-        }
+        observer.onCompleted();
     }
 
     @Override
     protected void serverStreamingImpl(Packet<?> packet, StreamObserver<Packet<?>> observer) {
-
+        try {
+            Context context = buildContext(packet);
+            MessageChannel<?> channel = new MessageChannel<>(observer);
+            context.setChannel(channel);
+            Packet<?> result = Utils.walkThrough(context, context.getMethodDescriptor().getInterceptors());
+            if (result.isException()) {
+                observer.onNext(result);
+            }
+        }catch (Exception ex){
+            observer.onNext(Packet.throwable(ex));
+            observer.onCompleted();
+        }
     }
 
     @Override
     protected StreamObserver<Packet<?>> clientStreamingImpl(StreamObserver<Packet<?>> observer) {
-        return null;
+        try {
+            Packet<?> packet =Transform.fromBinary(HeaderMetadata.BINARY_ROOT.getValue());
+            Context context = buildContext(packet);
+            Packet<?> result = Utils.walkThrough(context, context.getMethodDescriptor().getInterceptors());
+            if (!result.isException()) {
+                Consumer<?> origin = (Consumer<?>) result.getPayload();
+                MessageObserver messageObserver = new MessageObserver(origin);
+                MessageChannel<?> channel = new MessageChannel<>(observer).link(messageObserver.getChannel());
+                return messageObserver;
+            }
+            throw (Exception) result.getPayload();
+        }catch (Exception ex){
+            observer.onNext(Packet.throwable(ex));
+            observer.onCompleted();
+            return null;
+        }
     }
 
     @Override
     protected StreamObserver<Packet<?>> bidiStreamingImpl(StreamObserver<Packet<?>> observer) {
-        return null;
+        try {
+            Packet<?> packet =Transform.fromBinary(HeaderMetadata.BINARY_ROOT.getValue());
+            Context context = buildContext(packet);
+            MessageChannel<?> channel = new MessageChannel<>(observer);
+            context.setChannel(channel);
+            Packet<?> result = Utils.walkThrough(context, context.getMethodDescriptor().getInterceptors());
+            if (!result.isException()) {
+                Consumer<?> origin = (Consumer<?>) result.getPayload();
+                MessageObserver messageObserver = new MessageObserver(origin);
+                channel.link(messageObserver.getChannel());
+                return messageObserver;
+            }
+            throw (Exception) result.getPayload();
+        }catch (Exception ex){
+            observer.onNext(Packet.throwable(ex));
+            observer.onCompleted();
+            return null;
+        }
     }
 
 }

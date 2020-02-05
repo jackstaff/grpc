@@ -1,11 +1,11 @@
 package org.jackstaff.grpc.demo.common.interceptor;
 
 import org.jackstaff.grpc.Context;
-import org.jackstaff.grpc.interceptor.Interceptor;
+import org.jackstaff.grpc.Interceptor;
 
 /**
  * @author reco@jackstaff.org
- * @see org.jackstaff.grpc.interceptor.Interceptor
+ * @see Interceptor
  * @see org.jackstaff.grpc.demo.common.interceptor.Credential
  */
 public class Authorization implements Interceptor {
@@ -13,11 +13,10 @@ public class Authorization implements Interceptor {
     static final String AUTHORIZATION = "Authorization";
 
     @Override
-    public boolean before(Context context) throws Exception {
-        if (validate(context, context.getMetadata(AUTHORIZATION))){
-            return true;
+    public void before(Context context) throws Exception {
+        if (!validate(context, context.getMetadata(AUTHORIZATION))){
+            throw new SecurityException("NO Permission:"+context.getMethod().getName());
         }
-        throw new SecurityException("NO Permission:"+context.getMethod().getName());
     }
 
     protected boolean validate(Context context, String token){

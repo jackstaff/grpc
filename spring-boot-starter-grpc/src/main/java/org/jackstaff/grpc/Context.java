@@ -7,43 +7,28 @@ import org.springframework.context.ApplicationContext;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * @author reco@jackstaff.org
  */
 public class Context {
 
-    private static ThreadLocal<Context> local = new ThreadLocal<>();
-
-    static void setCurrent(Context context) {
-        local.set(context);
-    }
-
-    static void remove(Context context) {
-        if (local.get() == context) {
-            local.remove();
-        }
-    }
-
-    public static Context current() {
-        return local.get();
-    }
-
     private final ApplicationContext appContext;
     private final Object[] arguments;
     private final Object target;
     private final Map<Object, Object> attributes;
     private final PacketStub<?> stub;
-    private final MethodInfo info;
+    private final MethodDescriptor methodDescriptor;
 
-    Context(ApplicationContext appContext, MethodInfo info, Object[] arguments, Object target){
-        this(appContext,null, info, arguments, target);
+    Context(ApplicationContext appContext, MethodDescriptor methodDescriptor, Object[] arguments, Object target){
+        this(appContext,null, methodDescriptor, arguments, target);
     }
 
-    Context(ApplicationContext appContext, PacketStub<?> stub, MethodInfo info, Object[] arguments, Object target) {
+    Context(ApplicationContext appContext, PacketStub<?> stub, MethodDescriptor methodDescriptor, Object[] arguments, Object target) {
         this.attributes = new ConcurrentHashMap<>();
         this.appContext = appContext;
-        this.info = info;
+        this.methodDescriptor = methodDescriptor;
         this.arguments = arguments;
         this.target = target;
         this.stub = stub;
@@ -54,11 +39,11 @@ public class Context {
     }
 
     public Class<?> getType() {
-        return info.getType();
+        return methodDescriptor.getType();
     }
 
     public Method getMethod() {
-        return info.getMethod();
+        return methodDescriptor.getMethod();
     }
 
     public Object[] getArguments() {
@@ -79,10 +64,6 @@ public class Context {
     }
 
     public String getMetadata(String name) {
-        if (stub !=null) {
-            return null;
-//            throw new ValidationException(" only support in @Server interceptor");
-        }
         return HeaderMetadata.stringValue(name);
     }
 
@@ -101,8 +82,12 @@ public class Context {
         stub.attach(name, value);
     }
 
-    MethodInfo getMethodInfo() {
-        return info;
+    MethodDescriptor getMethodDescriptor() {
+        return methodDescriptor;
+    }
+
+    void setChannel(Consumer<?> channel){
+        arguments[methodDescriptor.getChannelIndex()] = channel;
     }
 
 }

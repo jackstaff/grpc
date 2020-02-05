@@ -15,7 +15,7 @@ public class ClientApplication {
     public static void main(String[] args) throws Exception{
         ApplicationContext appContext =SpringApplication.run(ClientApplication.class, args);
         ClientService clientService = appContext.getBean(ClientService.class);
-        clientService.sayHello();
+        clientService.walkThrough();
 
         new DelayQueue<>().take();
     }
