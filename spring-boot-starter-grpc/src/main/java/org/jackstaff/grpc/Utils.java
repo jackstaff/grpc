@@ -1,23 +1,11 @@
 package org.jackstaff.grpc;
 
-import org.springframework.beans.BeanUtils;
-
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 class Utils {
 
-    private static final Map<Class<? extends Interceptor>, Interceptor> interceptors = new ConcurrentHashMap<>();
-
-    public static List<Interceptor> getInterceptors(Class<? extends Interceptor>[] types){
-        return Arrays.stream(types).map(BeanUtils::instantiateClass).collect(Collectors.toList());
-    }
-
-    public static Packet<?> before(Context context, List<Interceptor> interceptors) {
+    static Packet<?> before(Context context, List<Interceptor> interceptors) {
         for (int i = 0; i < interceptors.size(); i++) {
             try {
                 interceptors.get(i).before(context);
@@ -35,7 +23,7 @@ class Utils {
         return Packet.NULL();
     }
 
-    public static Packet<?> invoke(Object target, Method method, Object[] args) {
+    static Packet<?> invoke(Object target, Method method, Object[] args) {
         Object result;
         try {
             if (args ==null || args.length ==0){
@@ -49,7 +37,7 @@ class Utils {
         }
     }
 
-    public static void after(Context context, List<Interceptor> interceptors, Packet<?> packet) {
+    static void after(Context context, List<Interceptor> interceptors, Packet<?> packet) {
         try {
             for (int i = interceptors.size()-1; i >=0 ; i--) {
                 if (packet.isException()) {
@@ -63,7 +51,7 @@ class Utils {
         }
     }
 
-    public static Packet<?> walkThrough(Context context, List<Interceptor> interceptors) {
+    static Packet<?> walkThrough(Context context, List<Interceptor> interceptors) {
         Packet<?> packet = before(context, interceptors);
         if (!packet.isException()){
             packet = invoke(context.getTarget(), context.getMethod(), context.getArguments());

@@ -1,11 +1,13 @@
 package org.jackstaff.grpc.demo.service;
 
 import org.jackstaff.grpc.MessageChannel;
+import org.jackstaff.grpc.PacketClient;
 import org.jackstaff.grpc.annotation.Client;
 import org.jackstaff.grpc.demo.*;
 import org.jackstaff.grpc.demo.common.interceptor.Credential;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
@@ -35,10 +37,10 @@ public class ClientService {
 
     public void walkThrough() {
         walkThroughHelloService();
-//        LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(10));
-//        walkThroughPacketHelloService();
-//        LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(10));
-//        walkThroughCompletableHelloService();
+        LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(10));
+        walkThroughPacketHelloService();
+        LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(10));
+        walkThroughCompletableHelloService();
     }
 
     public void walkThroughHelloService() {

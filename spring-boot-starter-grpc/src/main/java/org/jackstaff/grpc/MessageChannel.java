@@ -7,7 +7,11 @@ import org.jackstaff.grpc.exception.StatusException;
 import org.jackstaff.grpc.internal.Original;
 
 import javax.annotation.Nonnull;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -18,20 +22,22 @@ public class MessageChannel<T> implements Consumer<T> {
     private volatile AtomicInteger closed;
     private Consumer<T> consumer;
     private StreamObserver<Packet<?>> observer;
+    private boolean ready;
+    private T errorMessage;
+    private Map<Integer, Runnable> notify = new ConcurrentHashMap<>();
+
+    MessageChannel() {
+        this(t -> {});
+    }
 
     public MessageChannel(Consumer<T> consumer) {
         this.consumer = consumer;
         this.closed = new AtomicInteger(Command.OK);
     }
 
-    public boolean isClosed() {
-        return closed.get() != Command.OK;
-    }
-
-    void close(int command) {
-        if (closed.get() < command) {
-            closed.set(command);
-        }
+    MessageChannel(StreamObserver<Packet<?>> observer){
+        this.closed = new AtomicInteger(Command.OK);
+        setObserver(observer);
     }
 
     @Override
@@ -40,6 +46,39 @@ public class MessageChannel<T> implements Consumer<T> {
             throw new StatusException(closed.toString());
         }
         acceptMessage(t);
+    }
+
+    public boolean isClosed() {
+        return closed.get() != Command.OK;
+    }
+
+    public MessageChannel<T> onError(@Nonnull T errorMessage){
+        if (ready){
+            throw new StatusException("please call before ready");
+        }
+        this.errorMessage = errorMessage;
+        Optional.ofNullable(notify.get(Command.ERROR_MESSAGE)).ifPresent(Runnable::run);
+        return this;
+    }
+
+    MessageChannel<T> addNotify(int command, Runnable runnable) {
+        this.notify.put(command, runnable);
+        return this;
+    }
+
+    T getErrorMessage() {
+        return errorMessage;
+    }
+
+    public MessageChannel<T> ready() {
+        this.ready = true;
+        return this;
+    }
+
+    void close(int command) {
+        if (closed.get() < command) {
+            closed.set(command);
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -58,8 +97,7 @@ public class MessageChannel<T> implements Consumer<T> {
         return this;
     }
 
-    MessageChannel(StreamObserver<Packet<?>> observer){
-        this.closed = new AtomicInteger(Command.OK);
+    void setObserver(StreamObserver<Packet<?>> observer) {
         this.observer = observer;
         Original.accept(observer, ServerCallStreamObserver.class, o->o.setOnCancelHandler(() -> close(Command.UNREACHABLE)));
         this.consumer = info->onNext(Packet.message(info));

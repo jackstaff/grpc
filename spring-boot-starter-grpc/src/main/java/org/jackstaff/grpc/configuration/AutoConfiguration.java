@@ -15,30 +15,22 @@ import org.springframework.context.annotation.Bean;
 @EnableConfigurationProperties(Configuration.class)
 public class AutoConfiguration {
 
-    private final ApplicationContext appContext;
-
-    private final Configuration configuration;
+    private final SpringConfiguration springConfiguration;
 
     public AutoConfiguration(ApplicationContext appContext, Configuration configuration) {
-        this.appContext = appContext;
-        this.configuration = configuration;
+        this.springConfiguration = new SpringConfiguration(appContext, configuration);
     }
 
     @Bean
     @ConditionalOnMissingBean(PacketServer.class)
     public PacketServer packetServer() throws Exception {
-        PacketServer server= new PacketServer(appContext, configuration);
-        server.initial();
-        return server;
+        return springConfiguration.newPacketServer();
     }
 
     @Bean
     @ConditionalOnMissingBean(PacketClient.class)
     public PacketClient packetClient() throws Exception {
-        PacketClient client = new PacketClient(appContext, configuration);
-        client.initial();
-        return client;
+        return springConfiguration.newPacketClient();
     }
-
 
 }

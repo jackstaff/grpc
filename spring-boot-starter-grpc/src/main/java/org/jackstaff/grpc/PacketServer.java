@@ -3,78 +3,81 @@ package org.jackstaff.grpc;
 import io.grpc.*;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
-import org.jackstaff.grpc.configuration.Configuration;
+import org.jackstaff.grpc.configuration.ServerConfig;
 import org.jackstaff.grpc.exception.ValidationException;
 import org.jackstaff.grpc.internal.HeaderMetadata;
 import org.jackstaff.grpc.internal.PacketServerGrpc;
 import org.jackstaff.grpc.internal.Transform;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
  * @author reco@jackstaff.org
  */
-public class PacketServer extends PacketServerGrpc {
+public class PacketServer {
 
-    Logger logger = LoggerFactory.getLogger(PacketServer.class);
+    static final Logger logger = LoggerFactory.getLogger(PacketServer.class);
 
-    private final ApplicationContext appContext;
-    private final Configuration configuration;
     private final Map<String, MethodDescriptor> methods = new ConcurrentHashMap<>();
-
-    private io.grpc.Server grpcServer;
-
-    public PacketServer(ApplicationContext appContext, Configuration configuration) {
-        this.appContext = appContext;
-        this.configuration = configuration;
-    }
-
-    public void initial() {
-        Optional.ofNullable(configuration.getServer()).ifPresent(cfg->{
-            appContext.getBeansWithAnnotation(org.jackstaff.grpc.annotation.Server.class).values().forEach(bean->{
-                org.jackstaff.grpc.annotation.Server server =bean.getClass().getAnnotation(org.jackstaff.grpc.annotation.Server.class);
-                Class<?>[] services =Optional.of(server.service()).filter(a->a.length>0).orElseGet(server::value);
-                if (services.length ==0){
-                    throw new ValidationException(bean.getClass().getName()+ "@Server service is empty");
-                }
-                Arrays.stream(services).forEach(type->register((Class<Object>)type, bean, Utils.getInterceptors(server.interceptor())));
-            });
-            this.start(cfg);
-        });
-    }
+    private Server server;
 
     public <T> void register(Class<T> type, T bean, List<Interceptor> interceptors) {
-        if (!type.isAssignableFrom(bean.getClass())){
-            throw new ValidationException(bean.getClass().getName()+ "@Server service is NOT match");
+        if (!type.isInstance(bean)){
+            throw new ValidationException(bean.getClass().getName()+ " does NOT instanceof "+type.getName());
         }
-        logger.info("Packet Server register(@Server)..{}, {}", type.getName(), bean.getClass().getName());
-        Arrays.stream(type.getMethods()).map(method -> new MethodDescriptor(bean, type, method, interceptors)).
+        logger.info("Packet Server register..{}, {}", type.getName(), bean.getClass().getName());
+        Arrays.stream(type.getMethods()).map(method -> new MethodDescriptor(type, method, bean, interceptors)).
                 forEach(info -> methods.put(info.getSign(), info));
     }
 
-    public void start(Configuration.Server cfg){
-        NettyServerBuilder builder = NettyServerBuilder.forPort(cfg.getPort()).addService(bindService(this));
-        this.grpcServer = builder.build();
+    public void start(ServerConfig cfg) {
+        NettyServerBuilder builder = NettyServerBuilder.forPort(cfg.getPort()).addService(bindService(
+                new PacketServerGrpc(this::unary, this::serverStreaming, this::clientStreaming, this::bidiStreaming)));
+        if (cfg.getMaxInboundMessageSize() >512*1024){
+            builder.maxInboundMessageSize(cfg.getMaxInboundMessageSize());
+        }
+        if (cfg.getKeepAliveTimeout() >30) {
+            builder.keepAliveTimeout(cfg.getKeepAliveTimeout(), TimeUnit.SECONDS);
+        }
+        if (cfg.getKeepAliveTime() > 0){
+            builder.keepAliveTime(cfg.getKeepAliveTime(), TimeUnit.SECONDS);
+        }
+        if (cfg.getPermitKeepAliveTime() > 30) {
+            builder.permitKeepAliveTime(cfg.getPermitKeepAliveTime(), TimeUnit.SECONDS);
+            builder.permitKeepAliveWithoutCalls(cfg.isPermitKeepAliveWithoutCalls());
+        }
+        if (cfg.getMaxInboundMetadataSize() > 10*1024){
+            builder.maxInboundMetadataSize(cfg.getMaxInboundMetadataSize());
+        }
+        if (cfg.getMaxConnectionIdle() >0){
+            builder.maxConnectionIdle(cfg.getMaxConnectionIdle(), TimeUnit.SECONDS);
+        }
+        if (cfg.getMaxConnectionAge() >0) {
+            builder.maxConnectionAge(cfg.getMaxConnectionAge(), TimeUnit.SECONDS);
+        }
+        if (cfg.getMaxConnectionAgeGrace() >0) {
+            builder.maxConnectionAgeGrace(cfg.getMaxConnectionAgeGrace(), TimeUnit.SECONDS);
+        }
+        this.server = builder.build();
         try {
             logger.info("Packet Server Start at port {}", cfg.getPort());
-            grpcServer.start();
-        } catch (IOException e) {
-            logger.error(" Packet Server Start fail ", e);
+            server.start();
+        } catch (Exception e) {
+            logger.error("Packet Server Start fail ", e);
             e.printStackTrace();
         }
     }
 
     public void shutdown() {
-        Optional.ofNullable(grpcServer).ifPresent(Server::shutdown);
+        Optional.ofNullable(server).ifPresent(Server::shutdown);
     }
 
     private ServerServiceDefinition bindService(BindableService service){
@@ -97,28 +100,29 @@ public class PacketServer extends PacketServerGrpc {
         if (info ==null){
             throw new ValidationException("method Not found");
         }
-        return new Context(appContext, info, packet.unboxing(), info.getBean());
+        return new Context(info, packet.unboxing(), info.getBean());
     }
 
-    @Override
-    protected void unaryImpl(Packet<?> packet, StreamObserver<Packet<?>> observer) {
+    void unary(Packet<?> packet, StreamObserver<Packet<?>> observer) {
         try {
             Context context = buildContext(packet);
             MethodDescriptor info = context.getMethodDescriptor();
             if (info.getMode() == Mode.UnaryStreaming) {
-                serverStreamingImpl(packet, observer);
-                return;
+                MessageChannel<?> channel = new MessageChannel<>(observer);
+                context.setChannel(channel);
             }
             Packet<?> result = Utils.walkThrough(context, info.getInterceptors());
             observer.onNext(result);
+            if (info.getMode() == Mode.UnaryStreaming && !result.isException()) {
+                return;
+            }
         }catch (Exception ex){
             observer.onNext(Packet.throwable(ex));
         }
         observer.onCompleted();
     }
 
-    @Override
-    protected void serverStreamingImpl(Packet<?> packet, StreamObserver<Packet<?>> observer) {
+    void serverStreaming(Packet<?> packet, StreamObserver<Packet<?>> observer) {
         try {
             Context context = buildContext(packet);
             MessageChannel<?> channel = new MessageChannel<>(observer);
@@ -133,8 +137,7 @@ public class PacketServer extends PacketServerGrpc {
         }
     }
 
-    @Override
-    protected StreamObserver<Packet<?>> clientStreamingImpl(StreamObserver<Packet<?>> observer) {
+    StreamObserver<Packet<?>> clientStreaming(StreamObserver<Packet<?>> observer) {
         try {
             Packet<?> packet =Transform.fromBinary(HeaderMetadata.BINARY_ROOT.getValue());
             Context context = buildContext(packet);
@@ -142,7 +145,8 @@ public class PacketServer extends PacketServerGrpc {
             if (!result.isException()) {
                 Consumer<?> origin = (Consumer<?>) result.getPayload();
                 MessageObserver messageObserver = new MessageObserver(origin);
-                MessageChannel<?> channel = new MessageChannel<>(observer).link(messageObserver.getChannel());
+                messageObserver.getChannel().setObserver(observer);
+                //MessageChannel<?> channel = new MessageChannel<>(observer).link(messageObserver.getChannel());
                 return messageObserver;
             }
             throw (Exception) result.getPayload();
@@ -153,8 +157,7 @@ public class PacketServer extends PacketServerGrpc {
         }
     }
 
-    @Override
-    protected StreamObserver<Packet<?>> bidiStreamingImpl(StreamObserver<Packet<?>> observer) {
+    StreamObserver<Packet<?>> bidiStreaming(StreamObserver<Packet<?>> observer) {
         try {
             Packet<?> packet =Transform.fromBinary(HeaderMetadata.BINARY_ROOT.getValue());
             Context context = buildContext(packet);

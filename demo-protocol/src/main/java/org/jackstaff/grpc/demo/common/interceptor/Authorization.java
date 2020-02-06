@@ -15,7 +15,7 @@ public class Authorization implements Interceptor {
     @Override
     public void before(Context context) throws Exception {
         if (!validate(context, context.getMetadata(AUTHORIZATION))){
-            throw new SecurityException("NO Permission:"+context.getMethod().getName());
+            throw new SecurityException("NO Permission "+context.getType().getName()+":"+context.getMethod().getName());
         }
     }
 

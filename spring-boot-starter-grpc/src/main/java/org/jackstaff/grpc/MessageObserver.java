@@ -9,7 +9,8 @@ class MessageObserver implements StreamObserver<Packet<?>> {
     private final MessageChannel<?> channel;
 
     public MessageObserver(Consumer<?> origin) {
-        this.channel = origin instanceof MessageChannel ? (MessageChannel<?>) origin : new MessageChannel<>(origin);
+        this.channel = (origin instanceof MessageChannel ? (MessageChannel<?>) origin : new MessageChannel<>(origin)).ready();
+
     }
 
     public MessageChannel<?> getChannel() {

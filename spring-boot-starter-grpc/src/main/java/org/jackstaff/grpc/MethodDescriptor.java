@@ -5,7 +5,9 @@ import org.jackstaff.grpc.exception.ValidationException;
 
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
@@ -20,25 +22,24 @@ class MethodDescriptor {
     private List<Interceptor> interceptors;
     private Mode mode;
     private int channelIndex;
-    private String error;
     private String sign;
 
     public MethodDescriptor(Class<?> type, Method method) {
-        this(null, type, method, null);
+        this(type, method, null, null);
     }
 
-    public MethodDescriptor(Object bean, Class<?> type, Method method, List<Interceptor> interceptors) {
+    public MethodDescriptor(Class<?> type, Method method, Object bean, List<Interceptor> interceptors) {
         if (!type.isInterface()){
             throw new ValidationException("invalid type "+type.getName() +" MUST be interface");
         }
         this.bean = bean;
         this.type = type;
         this.method = method;
-        this.interceptors = Optional.ofNullable(interceptors).orElseGet(ArrayList::new);
+        this.interceptors = interceptors;
         String name = type.getName()+"/" + method.toString();
         this.sign = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8))+"-"+Math.abs(name.hashCode());
         this.mode = checkMode();
-        if (!isInvalid() && method.getAnnotation(AsynchronousUnary.class) != null){
+        if (method.getAnnotation(AsynchronousUnary.class) != null){
             if (mode == Mode.ServerStreaming){
                 this.mode = Mode.UnaryStreaming;
                 return;
@@ -47,11 +48,7 @@ class MethodDescriptor {
                 this.mode = Mode.UnaryAsynchronous;
                 return;
             }
-            this.error = method +" @Asynchronous Only for Unary Call & void return";
-            this.mode = Mode.Invalid;
-        }
-        if (isInvalid()){
-            throw new ValidationException(error);
+            throw new ValidationException(method + " @Asynchronous Only for Unary Call & void return");
         }
     }
 
@@ -71,14 +68,8 @@ class MethodDescriptor {
                 if (Consumer.class.equals(method.getReturnType())) {
                     return Mode.BiStreaming;
                 }
-            default:
-                error = method + " invalid sign";
-                return Mode.Invalid;
         }
-    }
-
-    public boolean isInvalid(){
-        return mode == Mode.Invalid;
+        throw new ValidationException(method + " invalid sign");
     }
 
     public Mode getMode() {
@@ -97,16 +88,12 @@ class MethodDescriptor {
         return sign;
     }
 
-    public String getError() {
-        return error;
-    }
-
-    public int getChannelIndex() {
-        return channelIndex;
-    }
-
-    Consumer<?> getChannel(Object[] args){
+    public Consumer<?> getChannel(Object[] args){
         return (Consumer<?>) args[channelIndex];
+    }
+
+    public void setChannel(Object[] args, Consumer<?> channel){
+        args[channelIndex] = channel;
     }
 
     public Object getBean() {
@@ -115,27 +102,6 @@ class MethodDescriptor {
 
     public List<Interceptor> getInterceptors() {
         return interceptors;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        MethodDescriptor that = (MethodDescriptor) o;
-        return type.equals(that.type) && method.equals(that.method);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(type, method);
-    }
-
-    @Override
-    public String toString() {
-        return "MethodInfo{" +
-                "type=" + type +
-                ", method=" + method +
-                '}';
     }
 
 }

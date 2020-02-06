@@ -16,6 +16,8 @@ public class HeaderMetadata<T> {
 
     public static final String AUTHORITY = "authority";
     public static final String REMOTE_ADDR = "remote-addr";
+    public static final String LOCAL_ADDR = "local-addr";
+    private static final String JACKSTAFF ="jackstaff-grpc";
 
     private final Metadata.Key<T> key;
     private Context.Key<Metadata> contextKey;
@@ -25,8 +27,8 @@ public class HeaderMetadata<T> {
         this.key = key;
     }
 
-    public static HeaderMetadata<String> ROOT = string("jackstaff-grpc");
-    public static HeaderMetadata<byte[]> BINARY_ROOT = binary("jackstaff-grpc-bin");
+    public static HeaderMetadata<String> ROOT = string(JACKSTAFF);
+    public static HeaderMetadata<byte[]> BINARY_ROOT = binary(JACKSTAFF+Metadata.BINARY_HEADER_SUFFIX);
 
     public static HeaderMetadata<String> string(String name) {
         return new HeaderMetadata<>(stringKey(name));
@@ -86,6 +88,8 @@ public class HeaderMetadata<T> {
                 ifPresent(a->metadata.put(stringKey(AUTHORITY), authority));
         Optional.ofNullable(attributes.get(Grpc.TRANSPORT_ATTR_REMOTE_ADDR)).map(Object::toString).
                 ifPresent(addr->metadata.put(stringKey(REMOTE_ADDR), addr));
+        Optional.ofNullable(attributes.get(Grpc.TRANSPORT_ATTR_LOCAL_ADDR)).map(Object::toString).
+                ifPresent(addr->metadata.put(stringKey(LOCAL_ADDR), addr));
         metadata.merge(headers);
         if (this.context ==null) synchronized (this) {
             this.contextKey = Context.keyWithDefault(ROOT.key.name(), new Metadata());

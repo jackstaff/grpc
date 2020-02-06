@@ -15,23 +15,17 @@ import java.util.Iterator;
  */
 public class PacketStub<S extends AbstractStub<S>> {
 
-    private final String authority;
-    private final Channel channel;
     private InternalBlockingStub blockingStub;
     private InternalStub asyncStub;
     private S stub;
 
     public PacketStub(String authority, Channel channel){
-        this.authority = authority;
-        this.channel = channel;
         this.blockingStub = InternalGrpc.newBlockingStub(channel).build(channel, CallOptions.DEFAULT.withAuthority(authority));
         this.asyncStub = InternalGrpc.newStub(channel).build(channel, CallOptions.DEFAULT.withAuthority(authority));
     }
 
     @SuppressWarnings("unchecked")
     public PacketStub(PacketStub<?> another, boolean block) {
-        this.authority = another.authority;
-        this.channel = another.channel;
         this.stub = (S)(block ? another.blockingStub : another.asyncStub);
     }
 
@@ -45,14 +39,6 @@ public class PacketStub<S extends AbstractStub<S>> {
 
     public void attach(String name, byte[] value) {
         stub = HeaderMetadata.attachBinary(stub, name, value);
-    }
-
-    public String getAuthority() {
-        return authority;
-    }
-
-    public Channel getChannel() {
-        return channel;
     }
 
     public Packet<?> unary(Packet<?> packet) {
