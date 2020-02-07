@@ -20,6 +20,7 @@ import java.util.function.Consumer;
 @Server(service = PacketHelloService.class)
 public class MyPacketHelloService implements PacketHelloService {
     Logger logger = LoggerFactory.getLogger(MyPacketHelloService.class);
+    ScheduledExecutorService schedule = Executors.newScheduledThreadPool(5);
 
     @Autowired
     private MyHelloService myHelloService;
@@ -33,6 +34,7 @@ public class MyPacketHelloService implements PacketHelloService {
     public void lotsOfReplies(String greeting, Consumer<Packet<HelloResponse>> replies) {
         logger.info("PacketHelloService.lotsOfReplies receive: {}",  greeting);
         for (int i = 0; i < greeting.length(); i++) {
+            int index = i;
             replies.accept(new Packet<>(i< greeting.length()-1 ? Packet.MESSAGE : Packet.COMPLETED, new HelloResponse(i+":"+greeting.charAt(i))));
         }
     }

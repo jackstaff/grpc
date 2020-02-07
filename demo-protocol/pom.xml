@@ -16,10 +16,10 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.jackstaff</groupId>
-            <artifactId>spring-boot-starter-grpc</artifactId>
-            <version>${grpc.version}</version>
-        </dependency>
+            <groupId>org.jackstaff.grpc</groupId>
+            <artifactId>grpc-spring-boot-starter</artifactId>
+            <version>1.0</version>
+    </dependency>
     </dependencies>
 
     <build>

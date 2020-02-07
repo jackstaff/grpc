@@ -11,7 +11,9 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="spring-boot-starter-grpc" />
+    <orderEntry type="module" module-name="demo-protocol" />
+    <orderEntry type="module" module-name="grpc-spring-boot-starter" />
+    <orderEntry type="module" module-name="grpc-core" />
     <orderEntry type="library" name="Maven: io.grpc:grpc-netty-shaded:1.26.0" level="project" />
     <orderEntry type="library" name="Maven: io.grpc:grpc-core:1.26.0" level="project" />
     <orderEntry type="library" name="Maven: com.google.code.gson:gson:2.8.6" level="project" />
@@ -38,7 +40,6 @@
     <orderEntry type="library" name="Maven: io.protostuff:protostuff-api:1.6.2" level="project" />
     <orderEntry type="library" name="Maven: io.protostuff:protostuff-runtime:1.6.2" level="project" />
     <orderEntry type="library" name="Maven: io.protostuff:protostuff-collectionschema:1.6.2" level="project" />
-    <orderEntry type="module" module-name="demo-protocol" />
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter:2.2.4.RELEASE" level="project" />
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot:2.2.4.RELEASE" level="project" />
     <orderEntry type="library" name="Maven: org.springframework:spring-context:5.2.3.RELEASE" level="project" />

@@ -11,7 +11,8 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="spring-boot-starter-grpc" />
+    <orderEntry type="module" module-name="grpc-spring-boot-starter" />
+    <orderEntry type="module" module-name="grpc-core" />
     <orderEntry type="library" name="Maven: io.grpc:grpc-netty-shaded:1.26.0" level="project" />
     <orderEntry type="library" name="Maven: io.grpc:grpc-core:1.26.0" level="project" />
     <orderEntry type="library" name="Maven: com.google.code.gson:gson:2.8.6" level="project" />

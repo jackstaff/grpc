@@ -8,8 +8,6 @@ import org.jackstaff.grpc.exception.ValidationException;
 import org.jackstaff.grpc.internal.HeaderMetadata;
 import org.jackstaff.grpc.internal.PacketServerGrpc;
 import org.jackstaff.grpc.internal.Transform;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
@@ -24,8 +22,6 @@ import java.util.function.Consumer;
  */
 public class PacketServer {
 
-    static final Logger logger = LoggerFactory.getLogger(PacketServer.class);
-
     private final Map<String, MethodDescriptor> methods = new ConcurrentHashMap<>();
     private Server server;
 
@@ -33,7 +29,6 @@ public class PacketServer {
         if (!type.isInstance(bean)){
             throw new ValidationException(bean.getClass().getName()+ " does NOT instanceof "+type.getName());
         }
-        logger.info("Packet Server register..{}, {}", type.getName(), bean.getClass().getName());
         Arrays.stream(type.getMethods()).map(method -> new MethodDescriptor(type, method, bean, interceptors)).
                 forEach(info -> methods.put(info.getSign(), info));
     }
@@ -68,11 +63,9 @@ public class PacketServer {
         }
         this.server = builder.build();
         try {
-            logger.info("Packet Server Start at port {}", cfg.getPort());
             server.start();
         } catch (Exception e) {
-            logger.error("Packet Server Start fail ", e);
-            e.printStackTrace();
+            throw new ValidationException("Packet Server Start fail ", e);
         }
     }
 
@@ -108,7 +101,7 @@ public class PacketServer {
             Context context = buildContext(packet);
             MethodDescriptor info = context.getMethodDescriptor();
             if (info.getMode() == Mode.UnaryStreaming) {
-                MessageChannel<?> channel = new MessageChannel<>(observer);
+                MessageChannel<?> channel = new MessageChannel<>(observer, packet.getCommand()).ready();
                 context.setChannel(channel);
             }
             Packet<?> result = Utils.walkThrough(context, info.getInterceptors());
@@ -125,7 +118,8 @@ public class PacketServer {
     void serverStreaming(Packet<?> packet, StreamObserver<Packet<?>> observer) {
         try {
             Context context = buildContext(packet);
-            MessageChannel<?> channel = new MessageChannel<>(observer);
+            int timeoutSeconds = packet.getCommand();
+            MessageChannel<?> channel = new MessageChannel<>(observer, timeoutSeconds).ready();
             context.setChannel(channel);
             Packet<?> result = Utils.walkThrough(context, context.getMethodDescriptor().getInterceptors());
             if (result.isException()) {
@@ -143,11 +137,12 @@ public class PacketServer {
             Context context = buildContext(packet);
             Packet<?> result = Utils.walkThrough(context, context.getMethodDescriptor().getInterceptors());
             if (!result.isException()) {
-                Consumer<?> origin = (Consumer<?>) result.getPayload();
-                MessageObserver messageObserver = new MessageObserver(origin);
-                messageObserver.getChannel().setObserver(observer);
-                //MessageChannel<?> channel = new MessageChannel<>(observer).link(messageObserver.getChannel());
-                return messageObserver;
+                MessageChannel<?> ssChannel = new MessageChannel<>(observer); //observer only one
+                MessageChannel<?> csChannel = MessageChannel.build((Consumer<?>)result.getPayload()).ready();
+                //Optional.ofNullable(csChannel.getErrorMessage()).ifPresent(msg->observer.onNext(new Packet<>(Command.ERROR_MESSAGE, msg)));
+                csChannel.link(ssChannel);
+                MessageObserver csObserver = new MessageObserver(csChannel);
+                return csObserver;
             }
             throw (Exception) result.getPayload();
         }catch (Exception ex){
@@ -161,13 +156,12 @@ public class PacketServer {
         try {
             Packet<?> packet =Transform.fromBinary(HeaderMetadata.BINARY_ROOT.getValue());
             Context context = buildContext(packet);
-            MessageChannel<?> channel = new MessageChannel<>(observer);
-            context.setChannel(channel);
+            MessageChannel<?> ssChannel = new MessageChannel<>(observer).ready();
+            context.setChannel(ssChannel);
             Packet<?> result = Utils.walkThrough(context, context.getMethodDescriptor().getInterceptors());
             if (!result.isException()) {
-                Consumer<?> origin = (Consumer<?>) result.getPayload();
-                MessageObserver messageObserver = new MessageObserver(origin);
-                channel.link(messageObserver.getChannel());
+                MessageChannel<?> csChannel = MessageChannel.build((Consumer<?>)result.getPayload()).ready().link(ssChannel);
+                MessageObserver messageObserver = new MessageObserver(csChannel);
                 return messageObserver;
             }
             throw (Exception) result.getPayload();

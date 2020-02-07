@@ -2,24 +2,22 @@ package org.jackstaff.grpc;
 
 import io.grpc.stub.StreamObserver;
 
-import java.util.function.Consumer;
+import java.util.Optional;
 
 class MessageObserver implements StreamObserver<Packet<?>> {
 
     private final MessageChannel<?> channel;
 
-    public MessageObserver(Consumer<?> origin) {
-        this.channel = (origin instanceof MessageChannel ? (MessageChannel<?>) origin : new MessageChannel<>(origin)).ready();
-
-    }
-
-    public MessageChannel<?> getChannel() {
-        return channel;
+    public MessageObserver(MessageChannel<?> channel) {
+        this.channel = channel;
     }
 
     @Override
     public void onNext(Packet<?> packet) {
         switch (packet.getCommand()) {
+            case Command.COMPLETED:
+                channel.close(Command.COMPLETED);
+                break;
             case Command.MESSAGE:
                 channel.acceptMessage(packet.getPayload());
                 break;
@@ -31,13 +29,14 @@ class MessageObserver implements StreamObserver<Packet<?>> {
                 channel.close(Command.TIMEOUT);
                 break;
             case Command.ERROR_MESSAGE:
+                Optional.ofNullable(packet.getPayload()).ifPresent(channel::setErrorMessage);
                 break;
         }
     }
 
     @Override
     public void onError(Throwable t) {
-        channel.close(Command.EXCEPTION);
+        channel.close(Command.UNREACHABLE);
     }
 
     @Override

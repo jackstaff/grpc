@@ -14,6 +14,11 @@ public class CompletableHelloResponse implements Completable {
         this.reply = reply;
     }
 
+    public CompletableHelloResponse(boolean completed, String reply) {
+        this.completed = completed;
+        this.reply = reply;
+    }
+
     public String getReply() {
         return reply;
     }
@@ -29,5 +34,13 @@ public class CompletableHelloResponse implements Completable {
 
     public void setCompleted(boolean completed) {
         this.completed = completed;
+    }
+
+    @Override
+    public String toString() {
+        return "CompletableHelloResponse{" +
+                "completed=" + completed +
+                ", reply='" + reply + '\'' +
+                '}';
     }
 }

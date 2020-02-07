@@ -71,8 +71,11 @@ public final class Packet<T> implements Completable, Command {
     }
 
     static Packet<Object[]> boxing(Object[] args){
-        return new Packet<>(Command.OK, Arrays.stream(args).map(a-> a == null || a instanceof Consumer ? new Object() : a).toArray());
+        return boxing(0, args);
     }
 
+    static Packet<Object[]> boxing(int command, Object[] args){
+        return new Packet<>(command, Arrays.stream(args).map(a-> a == null || a instanceof Consumer ? new Object() : a).toArray());
+    }
 
 }

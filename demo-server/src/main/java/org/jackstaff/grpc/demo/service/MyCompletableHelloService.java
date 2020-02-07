@@ -1,15 +1,14 @@
 package org.jackstaff.grpc.demo.service;
 
 import org.jackstaff.grpc.annotation.Server;
-import org.jackstaff.grpc.demo.CompletableHelloRequest;
-import org.jackstaff.grpc.demo.CompletableHelloResponse;
-import org.jackstaff.grpc.demo.CompletableHelloService;
-import org.jackstaff.grpc.demo.SocialInfo;
+import org.jackstaff.grpc.demo.*;
 import org.jackstaff.grpc.demo.common.interceptor.Authorization;
 import org.jackstaff.grpc.demo.common.interceptor.LoggerInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
@@ -18,30 +17,18 @@ import java.util.function.Consumer;
 public class MyCompletableHelloService implements CompletableHelloService {
 
     Logger logger = LoggerFactory.getLogger(MyCompletableHelloService.class);
-
-    @Override
-    public void postMessage(String message) {
-        logger.info("MyCompletableHelloService.postMessage receive: {}", message);
-        logger.info("for test @Asynchronous, i will sleep 30 seconds.....start...");
-        LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(30));
-        logger.info("...end...MyCompletableHelloService.postMessage wake up..");
-    }
-
-    @Override
-    public void postMessage(String message, Consumer<Boolean> result) {
-        logger.info("MyCompletableHelloService.postMessage receive: {}", message);
-        result.accept(message.length()>5);
-    }
-
-    @Override
-    public String deny(String message) {
-        logger.info("never here, since recalled by Authorization Interceptor");
-        return "it never happen";
-    }
+    ScheduledExecutorService schedule = Executors.newScheduledThreadPool(5);
 
     @Override
     public void lotsOfReplies(String greeting, Consumer<CompletableHelloResponse> replies) {
-
+        logger.info("MyCompletableHelloService.lotsOfReplies receive: {}",  greeting);
+        for (int i = 0; i < greeting.length(); i++) {
+            int index = i;
+            CompletableHelloResponse response = new CompletableHelloResponse();
+            response.setCompleted(i == greeting.length()-1);
+            response.setReply("lotsOfReplies(ServerStreaming)"+index+":"+greeting.charAt(index));
+            schedule.schedule(()->replies.accept(response), index+1, TimeUnit.SECONDS);
+        }
     }
 
     @Override

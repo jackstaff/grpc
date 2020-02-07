@@ -7,7 +7,6 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 
 /**
  * @author reco@jackstaff.org
@@ -17,20 +16,21 @@ public class Context {
     private final Object[] arguments;
     private final Object target;
     private final Map<Object, Object> attributes;
-    private final PacketStub<?> stub;
     private final MethodDescriptor methodDescriptor;
+    private PacketStub<?> stub;
 
     Context(MethodDescriptor methodDescriptor, Object[] arguments, Object target){
-        this(methodDescriptor, arguments, target, null);
-    }
-
-    Context(MethodDescriptor methodDescriptor, Object[] arguments, Object target, PacketStub<?> stub) {
         this.attributes = new ConcurrentHashMap<>();
         this.methodDescriptor = methodDescriptor;
         this.arguments = Optional.ofNullable(arguments).map(Object[]::clone).orElse(new Object[0]);
         this.target = target;
-        this.stub = stub;
     }
+
+    Context stub(PacketStub<?> stub){
+        this.stub = stub;
+        return this;
+    }
+
 
     public Class<?> getType() {
         return methodDescriptor.getType();
@@ -72,7 +72,7 @@ public class Context {
         return methodDescriptor;
     }
 
-    void setChannel(Consumer<?> channel){
+    void setChannel(MessageChannel<?> channel){
         methodDescriptor.setChannel(arguments, channel);
     }
 

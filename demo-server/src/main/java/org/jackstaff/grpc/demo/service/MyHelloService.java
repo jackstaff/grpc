@@ -5,8 +5,6 @@ import org.jackstaff.grpc.demo.HelloRequest;
 import org.jackstaff.grpc.demo.HelloResponse;
 import org.jackstaff.grpc.demo.HelloService;
 import org.jackstaff.grpc.demo.SocialInfo;
-import org.jackstaff.grpc.demo.common.interceptor.Authorization;
-import org.jackstaff.grpc.demo.common.interceptor.LoggerInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,11 +14,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-@Server(service = HelloService.class, interceptor = {LoggerInfo.class, Authorization.class})
+@Server(HelloService.class)
 public class MyHelloService implements HelloService {
 
     Logger logger = LoggerFactory.getLogger(MyHelloService.class);
-    ScheduledExecutorService schedule =Executors.newSingleThreadScheduledExecutor();
+    ScheduledExecutorService schedule = Executors.newScheduledThreadPool(5);
 
     public MyHelloService() {
         logger.info("MyHelloService..........CREATE......."+System.identityHashCode(this));
@@ -29,14 +27,16 @@ public class MyHelloService implements HelloService {
     @Override
     public String sayHello(String greeting) {
         logger.info("MyHelloService.sayHello receive: {}", greeting);
-        return "ok";
+        return "MyHelloService.ok";
     }
 
     @Override
     public void lotsOfReplies(String greeting, Consumer<HelloResponse> replies) {
         logger.info("MyHelloService.lotsOfReplies receive: {}",  greeting);
         for (int i = 0; i < greeting.length(); i++) {
-            replies.accept(new HelloResponse(i+":"+greeting.charAt(i)));
+            //replies.accept(new HelloResponse(i+":"+greeting.charAt(i)));
+            int index = i;
+            schedule.schedule(()->replies.accept(new HelloResponse("lotsOfReplies(ServerStreaming)"+index+":"+greeting.charAt(index))), (index+1)*200, TimeUnit.MILLISECONDS);
         }
     }
 

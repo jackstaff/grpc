@@ -88,11 +88,11 @@ class MethodDescriptor {
         return sign;
     }
 
-    public Consumer<?> getChannel(Object[] args){
-        return (Consumer<?>) args[channelIndex];
+    public MessageChannel<?> getChannel(Object[] args){
+        return MessageChannel.build((Consumer<?>) args[channelIndex]);
     }
 
-    public void setChannel(Object[] args, Consumer<?> channel){
+    public void setChannel(Object[] args, MessageChannel<?> channel){
         args[channelIndex] = channel;
     }
 

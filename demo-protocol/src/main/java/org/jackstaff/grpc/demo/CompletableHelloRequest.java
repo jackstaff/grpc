@@ -15,6 +15,11 @@ public class CompletableHelloRequest implements Completable {
         this.greeting = greeting;
     }
 
+    public CompletableHelloRequest(boolean completed, String greeting) {
+        this.completed = completed;
+        this.greeting = greeting;
+    }
+
     public String getGreeting() {
         return greeting;
     }
@@ -32,4 +37,11 @@ public class CompletableHelloRequest implements Completable {
         this.completed = completed;
     }
 
+    @Override
+    public String toString() {
+        return "CompletableHelloRequest{" +
+                "completed=" + completed +
+                ", greeting='" + greeting + '\'' +
+                '}';
+    }
 }
