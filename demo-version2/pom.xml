@@ -21,6 +21,12 @@
     </properties>
 
     <dependencies>
+
+        <dependency>
+            <groupId>org.jackstaff.grpc.demo</groupId>
+            <artifactId>demo-protocol</artifactId>
+            <version>1.0</version>
+        </dependency>
         <dependency>
             <groupId>org.jackstaff.grpc</groupId>
             <artifactId>grpc-spring-boot-starter</artifactId>

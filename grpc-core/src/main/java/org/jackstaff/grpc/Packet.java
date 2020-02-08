@@ -78,4 +78,16 @@ public final class Packet<T> implements Completable, Command {
         return new Packet<>(command, Arrays.stream(args).map(a-> a == null || a instanceof Consumer ? new Object() : a).toArray());
     }
 
+    String commandName(){
+        switch (command) {
+            case COMPLETED: return "COMPLETED";
+            case EXCEPTION: return "EXCEPTION";
+            case TIMEOUT: return "TIMEOUT";
+            case UNREACHABLE: return "UNREACHABLE";
+            case OK:
+            default:
+                return "OK";
+        }
+    }
+
 }

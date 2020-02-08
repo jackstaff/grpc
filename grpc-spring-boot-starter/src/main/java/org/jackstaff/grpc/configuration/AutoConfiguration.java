@@ -1,7 +1,7 @@
 package org.jackstaff.grpc.configuration;
 
-import org.jackstaff.grpc.PacketClient;
-import org.jackstaff.grpc.PacketServer;
+import org.jackstaff.grpc.Client;
+import org.jackstaff.grpc.Server;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
@@ -22,15 +22,15 @@ public class AutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean(PacketServer.class)
-    public PacketServer packetServer() throws Exception {
-        return springConfiguration.newPacketServer();
+    @ConditionalOnMissingBean(Server.class)
+    public Server packetServer() throws Exception {
+        return springConfiguration.newServer();
     }
 
     @Bean
-    @ConditionalOnMissingBean(PacketClient.class)
-    public PacketClient packetClient() throws Exception {
-        return springConfiguration.newPacketClient();
+    @ConditionalOnMissingBean(Client.class)
+    public Client packetClient() throws Exception {
+        return springConfiguration.newClient();
     }
 
 }

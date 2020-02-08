@@ -1,13 +1,11 @@
 package org.jackstaff.grpc.demo.service;
 
 import org.jackstaff.grpc.MessageChannel;
-import org.jackstaff.grpc.PacketClient;
 import org.jackstaff.grpc.annotation.Client;
 import org.jackstaff.grpc.demo.*;
 import org.jackstaff.grpc.demo.common.interceptor.Credential;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
@@ -33,20 +31,10 @@ public class ClientService {
     @Client(authority = Constant.DEMO_SERVER, interceptor = Credential.class)
     private AdvancedHelloService advancedHelloService;
 
-    @Client(Constant.DEMO_SERVER)
-    private PacketHelloService packetHelloService;
-
-    @Client(authority=Constant.DEMO_SERVER, interceptor = Credential.class)
-    private CompletableHelloService completableHelloService;
-
     public void walkThrough() {
-//        walkThroughHelloService();
-//        LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(10));
+        walkThroughHelloService();
+        LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(20));
         walkThroughAdvanceHelloService();
-//        LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(10));
-//        walkThroughPacketHelloService();
-//        LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(10));
-//        walkThroughCompletableHelloService();
     }
 
     public void walkThroughHelloService() {
@@ -57,8 +45,8 @@ public class ClientService {
         logger.info("idle 5 second for next step..");
         LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(5));
         logger.info("start lotsOfReplies (server streaming)..");
-        helloService.lotsOfReplies("hello friends!", helloResponse -> {
-            logger.info("lotsOfReplies..{}..response.{}", now(), helloResponse);
+        helloService.lotsOfReplies("hello friends!", response -> {
+            logger.info("lotsOfReplies..{}..response.{}", now(), response);
         });
 
         logger.info("idle 5 second for next step..");
@@ -69,9 +57,9 @@ public class ClientService {
         socialInfo.setMessage("social message");
         socialInfo.setFriends(Arrays.asList("reco", "lily", "laura"));
         logger.info("lotsOfGreetings send friend list: "+socialInfo.getFriends());
-        Consumer<HelloRequest> greetings = helloService.lotsOfGreetings(socialInfo);
+        Consumer<String> greetings = helloService.lotsOfGreetings(socialInfo);
         for (String name: socialInfo.getFriends()) {
-            greetings.accept(new HelloRequest("hi, "+name));
+            greetings.accept("hi, "+name);
         }
 
         logger.info("idle 5 second for next step..");
@@ -111,9 +99,13 @@ public class ClientService {
         logger.info("end postMessage.."+now());
 
         logger.info("start lotsOfReplies (server streaming)..");
-        HelloResponse ssErrorMessage = new HelloResponse("I (the client side) will receive this when network error");
-        HelloResponse ssTimeoutMessage = new HelloResponse("I (the client side) will receive this when timeout");
+        HelloResponse ssErrorMessage = new HelloResponse("I (the client side) receive this when error");
+        HelloResponse ssTimeoutMessage = new HelloResponse("I (the client side) receive this when timeout");
         Consumer<HelloResponse> ssConsumer = response -> {
+            if (ssErrorMessage == response){
+                logger.info("lotsOfReplies..{}..receive ERROR{}", now(), response);
+                return;
+            }
             logger.info("lotsOfReplies..{}..response.{}", now(), response);
         };
         int ssTimeoutSeconds = 10;
@@ -127,21 +119,60 @@ public class ClientService {
         logger.info("idle 5 second for next step..");
         LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(5));
         logger.info("start lotsOfGreetings (client streaming)..");
-        SocialInfo socialInfo = new SocialInfo();
-        socialInfo.setId(100);
-        socialInfo.setMessage("social message");
-        socialInfo.setFriends(Arrays.asList("reco", "lily", "laura", "yellow", "red", "black", "white"));
-        logger.info("lotsOfGreetings send friend list: "+socialInfo.getFriends());
-        Consumer<HelloRequest> greetings = advancedHelloService.lotsOfGreetings(socialInfo);
-        MessageChannel<HelloRequest> csChannel = (MessageChannel<HelloRequest>) greetings;
-        for (int i = 0; i < socialInfo.getFriends().size(); i++) {
-            HelloRequest request = new HelloRequest("hi, "+socialInfo.getFriends().get(i));
+        SocialInfo csSocialInfo = new SocialInfo();
+        csSocialInfo.setId(100);
+        csSocialInfo.setMessage("social message");
+        csSocialInfo.setFriends(Arrays.asList("reco", "lily", "laura", "yellow", "red", "black", "white"));
+        logger.info("lotsOfGreetings send friend list: "+csSocialInfo.getFriends());
+        Consumer<HelloRequest> csGreetings = advancedHelloService.lotsOfGreetings(csSocialInfo);
+        MessageChannel<HelloRequest> csChannel = (MessageChannel<HelloRequest>) csGreetings;
+        for (int i = 0; i < csSocialInfo.getFriends().size(); i++) {
+            HelloRequest request = new HelloRequest("hi, "+csSocialInfo.getFriends().get(i));
             schedule.schedule(()->{
                 if (csChannel.isClosed()){
-                    logger.info("channel closed "+csChannel+", request NOT send "+request);
+                    logger.info("channel closed "+csChannel+"("+csChannel.getError()+"), request NOT send "+request);
                     return;
                 }
                 csChannel.accept(request);
+            }, i+1, TimeUnit.SECONDS);
+        }
+
+        logger.info("idle 5 second for next step..");
+        LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(5));
+        logger.info("start bidiHello (bidi streaming)..");
+        SocialInfo biSocialInfo = new SocialInfo();
+        biSocialInfo.setId(100);
+        biSocialInfo.setMessage("social message");
+        biSocialInfo.setFriends(Arrays.asList("reco", "lily", "laura", "yellow", "red", "black", "white"));
+        logger.info("bidiHello send friend list: "+biSocialInfo.getFriends());
+
+        HelloResponse bisErrorMessage = new HelloResponse("I (the client side) receive this when error");
+        HelloResponse bisTimeoutMessage = new HelloResponse("I (the client side) receive this when timeout");
+        Consumer<HelloResponse> bisConsumer = response -> {
+            if (bisErrorMessage == response){
+                logger.info("bidiHello..{}..receive ERROR{}", now(), response);
+                return;
+            }
+            if (bisTimeoutMessage == response){
+                logger.info("bidiHello..{}..receive TIMEOUT{}", now(), response);
+                return;
+            }
+
+            logger.info("bidiHello..{}..response.{}", now(), response);
+        };
+        int bisTimeoutSeconds = 30;
+        MessageChannel<HelloResponse> bisChannel = new MessageChannel<>(bisConsumer,
+                bisErrorMessage, Duration.ofSeconds(bisTimeoutSeconds), bisTimeoutMessage);
+        Consumer<HelloRequest> biGreetings = advancedHelloService.bidiHello(biSocialInfo, bisChannel);
+        MessageChannel<HelloRequest> bicsChannel = (MessageChannel<HelloRequest>) biGreetings;
+        for (int i = 0; i < biSocialInfo.getFriends().size(); i++) {
+            HelloRequest request = new HelloRequest("hi, "+biSocialInfo.getFriends().get(i));
+            schedule.schedule(()->{
+                if (bicsChannel.isClosed()){
+                    logger.info("channel closed "+bicsChannel+"("+bicsChannel.getError()+"), request NOT send "+request);
+                    return;
+                }
+                bicsChannel.accept(request);
             }, i+1, TimeUnit.SECONDS);
         }
 
@@ -153,20 +184,9 @@ public class ClientService {
         }catch (Exception ex){
             ex.printStackTrace();
         }
-    }
-    public void walkThroughPacketHelloService(){
-        logger.info("........packetHelloService..........");
 
     }
 
-    public void walkThroughCompletableHelloService(){
-        logger.info("........completableHelloService..........");
-
-
-
-        logger.info("completableHelloService..end..");
-
-    }
 
     String now(){
         return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX").format(new Date());

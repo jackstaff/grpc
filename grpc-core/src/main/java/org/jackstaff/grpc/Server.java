@@ -20,10 +20,10 @@ import java.util.function.Consumer;
 /**
  * @author reco@jackstaff.org
  */
-public class PacketServer {
+public class Server {
 
     private final Map<String, MethodDescriptor> methods = new ConcurrentHashMap<>();
-    private Server server;
+    private io.grpc.Server server;
 
     public <T> void register(Class<T> type, T bean, List<Interceptor> interceptors) {
         if (!type.isInstance(bean)){
@@ -65,12 +65,12 @@ public class PacketServer {
         try {
             server.start();
         } catch (Exception e) {
-            throw new ValidationException("Packet Server Start fail ", e);
+            throw new ValidationException("Server Start fail ", e);
         }
     }
 
     public void shutdown() {
-        Optional.ofNullable(server).ifPresent(Server::shutdown);
+        Optional.ofNullable(server).ifPresent(io.grpc.Server::shutdown);
     }
 
     private ServerServiceDefinition bindService(BindableService service){
@@ -118,8 +118,7 @@ public class PacketServer {
     void serverStreaming(Packet<?> packet, StreamObserver<Packet<?>> observer) {
         try {
             Context context = buildContext(packet);
-            int timeoutSeconds = packet.getCommand();
-            MessageChannel<?> channel = new MessageChannel<>(observer, timeoutSeconds).ready();
+            MessageChannel<?> channel = new MessageChannel<>(observer, packet.getCommand()).ready();
             context.setChannel(channel);
             Packet<?> result = Utils.walkThrough(context, context.getMethodDescriptor().getInterceptors());
             if (result.isException()) {
@@ -137,12 +136,9 @@ public class PacketServer {
             Context context = buildContext(packet);
             Packet<?> result = Utils.walkThrough(context, context.getMethodDescriptor().getInterceptors());
             if (!result.isException()) {
-                MessageChannel<?> ssChannel = new MessageChannel<>(observer); //observer only one
+                MessageChannel<?> channel = new MessageChannel<>(observer);
                 MessageChannel<?> csChannel = MessageChannel.build((Consumer<?>)result.getPayload()).ready();
-                //Optional.ofNullable(csChannel.getErrorMessage()).ifPresent(msg->observer.onNext(new Packet<>(Command.ERROR_MESSAGE, msg)));
-                csChannel.link(ssChannel);
-                MessageObserver csObserver = new MessageObserver(csChannel);
-                return csObserver;
+                return new MessageObserver(csChannel.link(channel));
             }
             throw (Exception) result.getPayload();
         }catch (Exception ex){
@@ -160,9 +156,8 @@ public class PacketServer {
             context.setChannel(ssChannel);
             Packet<?> result = Utils.walkThrough(context, context.getMethodDescriptor().getInterceptors());
             if (!result.isException()) {
-                MessageChannel<?> csChannel = MessageChannel.build((Consumer<?>)result.getPayload()).ready().link(ssChannel);
-                MessageObserver messageObserver = new MessageObserver(csChannel);
-                return messageObserver;
+                MessageChannel<?> csChannel = MessageChannel.build((Consumer<?>)result.getPayload()).ready();
+                return new MessageObserver(csChannel).link(ssChannel);
             }
             throw (Exception) result.getPayload();
         }catch (Exception ex){

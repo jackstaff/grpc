@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author reco@jackstaff.org
  */
-public class PacketClient {
+public class Client {
 
     public interface ProxyCreator {
         Object newProxyInstance(Class<?> type, InvocationHandler handler);
@@ -27,11 +27,11 @@ public class PacketClient {
     private final Map<String, PacketStub<?>> stubs = new ConcurrentHashMap<>();
     private final ProxyCreator creator;
 
-    public PacketClient() {
+    public Client() {
         this((type, handler) -> Proxy.newProxyInstance(type.getClassLoader(), new Class[]{type}, handler));
     }
 
-    public PacketClient(ProxyCreator creator){
+    public Client(ProxyCreator creator){
         this.creator = creator;
     }
 
@@ -42,7 +42,7 @@ public class PacketClient {
                 builder.keepAliveTime(cfg.getKeepAliveTime(), TimeUnit.SECONDS);
                 builder.keepAliveWithoutCalls(cfg.isKeepAliveWithoutCalls());
             }
-            if (cfg.getIdleTimeout() > 30) {
+            if (cfg.getIdleTimeout() > 300) {
                 builder.idleTimeout(cfg.getIdleTimeout(), TimeUnit.SECONDS);
             }
             if (cfg.getKeepAliveTimeout() >30) {
@@ -115,13 +115,17 @@ public class PacketClient {
                     return Packet.NULL();
                 case ClientStreaming:
                     stub.attach(HeaderMetadata.BINARY_ROOT, Transform.toBinary(Packet.boxing(context.getArguments())));
-                    MessageChannel<?> channel = new MessageChannel<>(t->{});
-                    return Packet.ok(new MessageChannel<>(stub.clientStreaming(new MessageObserver(channel))).link(channel));
+                    MessageObserver csObserver = new MessageObserver(new MessageChannel<>(t->{}));
+                    MessageChannel<?> csChannel = new MessageChannel<>(stub.clientStreaming(csObserver));
+                    csObserver.link(csChannel);
+                    return Packet.ok(csChannel);
                 case BiStreaming:
                     MessageChannel<?> bsChannel = info.getChannel(context.getArguments()).ready();
                     stub.attach(HeaderMetadata.BINARY_ROOT, Transform.toBinary(Packet.boxing(bsChannel.getTimeoutSeconds(), context.getArguments())));
                     MessageObserver bsObserver = new MessageObserver(bsChannel);
-                    return Packet.ok(new MessageChannel<>(stub.bidiStreaming(bsObserver)).link(bsChannel));
+                    MessageChannel<?> channel = new MessageChannel<>(stub.bidiStreaming(bsObserver));
+                    bsObserver.link(channel);
+                    return Packet.ok(channel);
                 default:
                     return Packet.NULL();
             }
@@ -129,6 +133,5 @@ public class PacketClient {
             return Packet.throwable(ex);
         }
     }
-
 
 }

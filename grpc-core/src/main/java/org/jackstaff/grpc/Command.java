@@ -7,7 +7,6 @@ interface Command {
 
     int OK = 0;
     int MESSAGE = OK;
-    int ERROR_MESSAGE = -1;
 
     int COMPLETED_RANGE_MIN =1;
 

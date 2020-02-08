@@ -1,8 +1,6 @@
 package org.jackstaff.grpc.configuration;
 
 import org.jackstaff.grpc.Interceptor;
-import org.jackstaff.grpc.PacketClient;
-import org.jackstaff.grpc.PacketServer;
 import org.jackstaff.grpc.annotation.Client;
 import org.jackstaff.grpc.annotation.Server;
 import org.jackstaff.grpc.exception.ValidationException;
@@ -41,8 +39,8 @@ public class SpringConfiguration {
         return Arrays.stream(types).map(SpringConfiguration::getInterceptor).collect(Collectors.toList());
     }
 
-    public PacketServer newPacketServer() throws Exception {
-        PacketServer server = new PacketServer();
+    public org.jackstaff.grpc.Server newServer() throws Exception {
+        org.jackstaff.grpc.Server server = new org.jackstaff.grpc.Server();
         Optional.ofNullable(configuration.getServer()).ifPresent(cfg -> {
             appContext.getBeansWithAnnotation(Server.class).values().forEach(bean -> {
                 Server s = bean.getClass().getAnnotation(Server.class);
@@ -57,15 +55,15 @@ public class SpringConfiguration {
         return server;
     }
 
-    public PacketClient newPacketClient() throws Exception {
-        PacketClient client = new PacketClient((type, handler) ->
+    public org.jackstaff.grpc.Client newClient() throws Exception {
+        org.jackstaff.grpc.Client client = new org.jackstaff.grpc.Client((type, handler) ->
                 Proxy.newProxyInstance(type.getClassLoader(), new Class[]{type}, handler::invoke));
         Optional.ofNullable(configuration.getClient()).ifPresent(client::setup);
         appContext.getBeansWithAnnotation(Component.class).forEach((name, bean) -> inject(client, name, bean));
         return client;
     }
 
-    private void inject(PacketClient packetClient, String name, Object bean) {
+    private void inject(org.jackstaff.grpc.Client packetClient, String name, Object bean) {
         Map<Field, Client> fields = clientFields(bean);
         fields.forEach((field, client) -> inject(packetClient, name, bean, field, client));
     }
@@ -81,7 +79,7 @@ public class SpringConfiguration {
         return fields;
     }
 
-    private void inject(PacketClient packetClient, String name, Object bean, Field field, Client client) {
+    private void inject(org.jackstaff.grpc.Client packetClient, String name, Object bean, Field field, Client client) {
         String authority = Optional.of(client.authority()).filter(a -> !a.isEmpty()).orElseGet(client::value);
         if (authority.isEmpty()) {
             throw new ValidationException(name + ":" + field.getName() + "@Client value/authority is empty");

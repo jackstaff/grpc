@@ -1,5 +1,6 @@
 package org.jackstaff.grpc;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 
@@ -32,7 +33,9 @@ class Utils {
                 result = method.invoke(target, args);
             }
             return Packet.ok(result);
-        } catch (Exception ex) {
+        }catch (InvocationTargetException ex){
+            return Packet.throwable(ex.getTargetException());
+        }catch (Exception ex) {
             return Packet.throwable(ex);
         }
     }

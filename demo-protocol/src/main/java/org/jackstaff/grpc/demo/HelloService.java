@@ -6,9 +6,9 @@ public interface HelloService {
 
     String sayHello(String greeting); //Unary RPCs
 
-    void lotsOfReplies(String greeting, Consumer<HelloResponse> replies);//Server streaming RPCs
+    void lotsOfReplies(String greeting, Consumer<String> replies);//Server streaming RPCs
 
-    Consumer<HelloRequest> lotsOfGreetings(SocialInfo socialInfo); //Client streaming RPCs
+    Consumer<String> lotsOfGreetings(SocialInfo socialInfo); //Client streaming RPCs
 
     Consumer<HelloRequest> bidiHello(SocialInfo socialInfo, Consumer<HelloResponse> replies); //Bidirectional streaming RPCs
 

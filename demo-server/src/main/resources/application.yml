@@ -3,4 +3,12 @@ spring:
   grpc:
     server:
       port: 9000
-
+#      keep-alive-time: 20
+#      keep-alive-timeout: 10
+#      permit-keep-alive-time: 300
+#      permit-keep-alive-without-calls: true
+#      max-inbound-message-size: 4194304
+#      max-inbound-metadata-size: 20480
+#      max-connection-idle: 0
+#      max-connection-age: 0
+#      max-connection-age-grace: 0

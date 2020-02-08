@@ -22,7 +22,7 @@ public class Context {
     Context(MethodDescriptor methodDescriptor, Object[] arguments, Object target){
         this.attributes = new ConcurrentHashMap<>();
         this.methodDescriptor = methodDescriptor;
-        this.arguments = Optional.ofNullable(arguments).map(Object[]::clone).orElse(new Object[0]);
+        this.arguments = Optional.ofNullable(arguments).orElse(new Object[0]);
         this.target = target;
     }
 
@@ -41,7 +41,7 @@ public class Context {
     }
 
     public Object[] getArguments() {
-        return arguments;
+        return arguments.clone();
     }
 
     public Object getTarget() {
@@ -65,7 +65,6 @@ public class Context {
         if (stub !=null){
             stub.attach(name, value);
         }
-        //throw new ValidationException(" only support in @Client interceptor");
     }
 
     MethodDescriptor getMethodDescriptor() {

@@ -13,7 +13,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
@@ -27,18 +26,17 @@ public class MessageChannel<T> implements Consumer<T> {
     private T errorMessage;
     private Duration timeout;
     private T timeoutMessage;
-    private AtomicInteger closed;
-
+    private Packet<Throwable> status;
     private StreamObserver<Packet<?>> observer;
 
     public MessageChannel(Consumer<T> consumer) {
         this.consumer = consumer;
-        this.closed = new AtomicInteger(Command.OK);
+        this.status = new Packet<>();
     }
 
     public MessageChannel(Consumer<T> consumer, @Nonnull T errorMessage) {
         this(consumer);
-        this.setErrorMessage(errorMessage);
+        this.errorMessage = errorMessage;
     }
 
     public MessageChannel(Consumer<T> consumer, @Nonnull Duration timeout, @Nonnull T timeoutMessage) {
@@ -49,7 +47,12 @@ public class MessageChannel<T> implements Consumer<T> {
 
     public MessageChannel(Consumer<T> consumer, @Nonnull T errorMessage, @Nonnull Duration timeout, @Nonnull T timeoutMessage) {
         this(consumer, timeout, timeoutMessage);
-        this.setErrorMessage(errorMessage);
+        this.errorMessage = errorMessage;
+    }
+
+    MessageChannel(StreamObserver<Packet<?>> observer){
+        this(t->{});
+        setObserver(observer);
     }
 
     MessageChannel(StreamObserver<Packet<?>> observer, int timeoutSeconds){
@@ -59,33 +62,38 @@ public class MessageChannel<T> implements Consumer<T> {
         }
     }
 
-    MessageChannel(StreamObserver<Packet<?>> observer){
-        this.closed = new AtomicInteger(Command.OK);
-        setObserver(observer);
-    }
-
-    public static MessageChannel<?> build(Consumer<?> consumer){
+    static MessageChannel<?> build(Consumer<?> consumer) {
         return consumer instanceof MessageChannel ? (MessageChannel<?>) consumer : new MessageChannel<>(consumer);
     }
 
     @Override
     public void accept(@Nonnull T t) {
         if (isClosed()) {
-            throw new StatusException(closed.toString());
+            throw new StatusException(""+status.getCommand());
         }
         acceptMessage(t);
     }
 
+    public void done() {
+        if (!isClosed()){
+            if (observer != null){
+                onNext(new Packet<>(Command.COMPLETED));
+            }
+            close(Command.COMPLETED);
+        }
+    }
+
     public boolean isClosed() {
-        return closed.get() != Command.OK;
+        return status.getCommand() != Command.OK;
     }
 
-    void setErrorMessage(Object errorMessage) {
-        this.errorMessage = (T)errorMessage;
+    public Throwable getError() {
+        return status.getPayload();
     }
 
-    T getErrorMessage() {
-        return errorMessage;
+    void setError(int errorCode, Throwable error) {
+        this.status.setPayload(error);
+        this.close(errorCode);
     }
 
     int getTimeoutSeconds() {
@@ -96,7 +104,7 @@ public class MessageChannel<T> implements Consumer<T> {
         if (this.timeout != null && !isClosed()){
             schedule.schedule(()-> {
                 if (!isClosed()){
-                    this.closed.set(Command.TIMEOUT);
+                    this.status.setCommand(Command.TIMEOUT);
                     Optional.ofNullable(timeoutMessage).ifPresent(msg-> CompletableFuture.runAsync(()->consumer.accept(msg)));
                 }
             }, timeout.toMillis(), TimeUnit.MILLISECONDS);
@@ -106,38 +114,44 @@ public class MessageChannel<T> implements Consumer<T> {
 
     void close(int command) {
         if (!isClosed()) {
-            closed.set(command);
             switch (command) {
+                case Command.EXCEPTION:
                 case Command.UNREACHABLE:
                     Optional.ofNullable(errorMessage).ifPresent(consumer);
                     break;
-                case Command.EXCEPTION:
                 case Command.TIMEOUT:
                 default:
                     break;
             }
         }
+        if (status.getCommand() < command){
+            status.setCommand(command);
+        }
     }
 
-    @SuppressWarnings("unchecked")
     void acceptMessage(Object t) {
         if (t==null || isClosed()) {
             return;
         }
-        consumer.accept((T)t);
+        directAccept(t);
         if (t instanceof Completable && ((Completable) t).isCompleted()) {
             this.close(Command.COMPLETED);
         }
     }
 
+    @SuppressWarnings("unchecked")
+    void directAccept(Object t) {
+        consumer.accept((T)t);
+    }
+
     MessageChannel<T> link(MessageChannel<?> another) {
-        this.closed = another.closed;
+        this.status = another.status;
         return this;
     }
 
     void setObserver(StreamObserver<Packet<?>> observer) {
         this.observer = observer;
-        Original.accept(observer, ServerCallStreamObserver.class, o->o.setOnCancelHandler(() -> close(Command.UNREACHABLE)));
+        Original.accept(observer, ServerCallStreamObserver.class, o->o.setOnCancelHandler(() -> setError(Command.UNREACHABLE, new StatusException("canceled"))));
         this.consumer = info->onNext(Packet.message(info));
     }
 
@@ -148,27 +162,15 @@ public class MessageChannel<T> implements Consumer<T> {
         try {
             this.observer.onNext(packet);
         }catch (StatusRuntimeException ex){
-            this.close(Command.UNREACHABLE);
-            throw ex;
-        }
-    }
-
-    String status() {
-        switch (closed.get()) {
-            case Command.EXCEPTION: return "EXCEPTION";
-            case Command.TIMEOUT: return "TIMEOUT";
-            case Command.UNREACHABLE: return "UNREACHABLE";
-            case Command.OK:
-            default:
-                return "OK";
+            StatusException se = new StatusException("canceled", ex);
+            this.setError(Command.UNREACHABLE, se);
+            throw se;
         }
     }
 
     @Override
     public String toString() {
-        return "MessageChannel{" +
-                "status='" + status() + '\'' +
-                '}';
+        return "MessageChannel{status='" + status.commandName() + "'}";
     }
 
 }
