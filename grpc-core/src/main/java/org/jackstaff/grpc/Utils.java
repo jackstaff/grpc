@@ -1,12 +1,13 @@
 package org.jackstaff.grpc;
 
+import javax.annotation.Nonnull;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 
 class Utils {
 
-    static Packet<?> before(Context context, List<Interceptor> interceptors) {
+    static @Nonnull Packet<?> before(Context context, List<Interceptor> interceptors) {
         for (int i = 0; i < interceptors.size(); i++) {
             try {
                 interceptors.get(i).before(context);
@@ -21,7 +22,7 @@ class Utils {
                 return Packet.throwable(exception);
             }
         }
-        return Packet.NULL();
+        return new Packet<>();
     }
 
     static Packet<?> invoke(Object target, Method method, Object[] args) {

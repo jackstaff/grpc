@@ -6,7 +6,7 @@ import java.util.function.Consumer;
 /**
  * @author reco@jackstaff.org
  */
-public final class Packet<T> implements Completable, Command {
+public class Packet<T> implements Command {
 
     private int command;
     private T payload;
@@ -22,11 +22,6 @@ public final class Packet<T> implements Completable, Command {
     public Packet(int command, T payload) {
         this.command = command;
         this.payload = payload;
-    }
-
-    @Override
-    public boolean isCompleted() {
-        return command >= COMPLETED_RANGE_MIN && command <= COMPLETED_RANGE_MAX;
     }
 
     public int getCommand() {
@@ -45,6 +40,9 @@ public final class Packet<T> implements Completable, Command {
         this.payload = payload;
     }
 
+    boolean isOk(){
+        return command == OK;
+    }
 
     boolean isException(){
         return command == EXCEPTION;
@@ -60,10 +58,6 @@ public final class Packet<T> implements Completable, Command {
 
     static Packet<?> message(Object value){
         return new Packet<>(MESSAGE, value);
-    }
-
-    static Packet<?> NULL() {
-        return new Packet<>();
     }
 
     Object[] unboxing(){

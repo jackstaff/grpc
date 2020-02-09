@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
+import java.util.stream.IntStream;
 
 @Service
 public class ClientService {
@@ -74,13 +75,14 @@ public class ClientService {
             counting.incrementAndGet();
         });
         for (int i = 0; i < 10; i++) {
+            int index = i;
             schedule.schedule(()->{
                 if (((MessageChannel<HelloRequest>)reqs).isClosed()){
-                    logger.info("channel is closed, network error");
+                    logger.info("bidiHello channel is closed, "+index);
                     return;
                 }
                 try {
-                    reqs.accept(new HelloRequest("ClientService received reply count:"+counting.get()));
+                    reqs.accept(new HelloRequest(index+"bidiHello ClientService received reply count:"+counting.get()));
                 }catch (Exception ex){
                     ex.printStackTrace();
                 }
@@ -114,7 +116,9 @@ public class ClientService {
         MessageChannel<HelloResponse> ssChannel = new MessageChannel<>(ssConsumer,
                 ssErrorMessage, Duration.ofSeconds(ssTimeoutSeconds), ssTimeoutMessage);
         advancedHelloService.lotsOfReplies(ssGreeting, ssChannel);
-
+        IntStream.range(1, 60).forEach(i->schedule.schedule(()->{
+            logger.info("lotsOfReplies.(server streaming) channel "+ssChannel);
+        }, i, TimeUnit.SECONDS));
 
         logger.info("idle 5 second for next step..");
         LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(5));
@@ -127,14 +131,19 @@ public class ClientService {
         Consumer<HelloRequest> csGreetings = advancedHelloService.lotsOfGreetings(csSocialInfo);
         MessageChannel<HelloRequest> csChannel = (MessageChannel<HelloRequest>) csGreetings;
         for (int i = 0; i < csSocialInfo.getFriends().size(); i++) {
-            HelloRequest request = new HelloRequest("hi, "+csSocialInfo.getFriends().get(i));
+            int index = i;
+            HelloRequest request = new HelloRequest("hi, "+csSocialInfo.getFriends().get(index));
             schedule.schedule(()->{
                 if (csChannel.isClosed()){
-                    logger.info("channel closed "+csChannel+"("+csChannel.getError()+"), request NOT send "+request);
+                    logger.info("client streaming channel closed "+csChannel+"("+csChannel.getError()+"), request NOT send "+request);
                     return;
                 }
                 csChannel.accept(request);
-            }, i+1, TimeUnit.SECONDS);
+                if (index == csSocialInfo.getFriends().size() -1){
+                    csChannel.done();
+                    logger.info("client streaming last one, done/completed");
+                }
+            }, index+1, TimeUnit.SECONDS);
         }
 
         logger.info("idle 5 second for next step..");
@@ -164,17 +173,21 @@ public class ClientService {
         MessageChannel<HelloResponse> bisChannel = new MessageChannel<>(bisConsumer,
                 bisErrorMessage, Duration.ofSeconds(bisTimeoutSeconds), bisTimeoutMessage);
         Consumer<HelloRequest> biGreetings = advancedHelloService.bidiHello(biSocialInfo, bisChannel);
-        MessageChannel<HelloRequest> bicsChannel = (MessageChannel<HelloRequest>) biGreetings;
+        MessageChannel<HelloRequest> bicChannel = (MessageChannel<HelloRequest>) biGreetings;
         for (int i = 0; i < biSocialInfo.getFriends().size(); i++) {
             HelloRequest request = new HelloRequest("hi, "+biSocialInfo.getFriends().get(i));
             schedule.schedule(()->{
-                if (bicsChannel.isClosed()){
-                    logger.info("channel closed "+bicsChannel+"("+bicsChannel.getError()+"), request NOT send "+request);
+                if (bicChannel.isClosed()){
+                    logger.info("bidi channel closed "+bicChannel+"("+bicChannel.getError()+"), request NOT send "+request);
                     return;
                 }
-                bicsChannel.accept(request);
+                bicChannel.accept(request);
             }, i+1, TimeUnit.SECONDS);
         }
+        IntStream.range(1, 60).forEach(i->schedule.schedule(()->{
+            logger.info("bidi hello bisChannel "+bisChannel);
+            logger.info("bidi hello bicChannel "+bicChannel);
+        }, i, TimeUnit.SECONDS));
 
         logger.info("NOW I WILL CALL DENY MESSAGE, AFTER 5 SECONDS, IT WILL THROW SECURITY EXCEPTION");
         LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(5));

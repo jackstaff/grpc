@@ -1,5 +1,6 @@
 package org.jackstaff.grpc;
 
+import io.grpc.ManagedChannel;
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
 import org.jackstaff.grpc.configuration.ClientConfig;
 import org.jackstaff.grpc.exception.ValidationException;
@@ -7,6 +8,7 @@ import org.jackstaff.grpc.internal.HeaderMetadata;
 import org.jackstaff.grpc.internal.PacketStub;
 import org.jackstaff.grpc.internal.Transform;
 
+import javax.annotation.Nonnull;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.util.List;
@@ -94,7 +96,7 @@ public class Client {
         return (T)bean;
     }
 
-    private Packet<?> stubCall(Context context, PacketStub<?> stub) {
+    private @Nonnull Packet<?> stubCall(Context context, PacketStub<?> stub) {
         MethodDescriptor info = context.getMethodDescriptor();
         try {
             switch (info.getMode()){
@@ -102,17 +104,17 @@ public class Client {
                     return stub.unary(Packet.boxing(context.getArguments()));
                 case UnaryAsynchronous:
                     stub.asynchronousUnary(Packet.boxing(context.getArguments()));
-                    return Packet.NULL();
+                    return new Packet<>();
                 case UnaryStreaming:
                     MessageChannel<?> usChannel = info.getChannel(context.getArguments()).ready();
                     MessageObserver usObserver = new MessageObserver(usChannel);
                     stub.unaryStreaming(Packet.boxing(usChannel.getTimeoutSeconds(), context.getArguments()), usObserver);
-                    return Packet.NULL();
+                    return new Packet<>();
                 case ServerStreaming:
                     MessageChannel<?> ssChannel = info.getChannel(context.getArguments()).ready();
                     MessageObserver ssObserver = new MessageObserver(ssChannel);
                     stub.serverStreaming(Packet.boxing(ssChannel.getTimeoutSeconds(), context.getArguments()), ssObserver);
-                    return Packet.NULL();
+                    return new Packet<>();
                 case ClientStreaming:
                     stub.attach(HeaderMetadata.BINARY_ROOT, Transform.toBinary(Packet.boxing(context.getArguments())));
                     MessageObserver csObserver = new MessageObserver(new MessageChannel<>(t->{}));
@@ -127,11 +129,17 @@ public class Client {
                     bsObserver.link(channel);
                     return Packet.ok(channel);
                 default:
-                    return Packet.NULL();
+                    return new Packet<>();
             }
         }catch (Exception ex){
             return Packet.throwable(ex);
         }
+    }
+
+    public void shutdown(){
+        stubs.values().parallelStream().map(PacketStub::getChannel).
+                filter(c->!c.isShutdown()).filter(c->!c.isTerminated()).
+                forEach(ManagedChannel::shutdown);
     }
 
 }

@@ -7,6 +7,7 @@ import org.jackstaff.grpc.exception.StatusException;
 import org.jackstaff.grpc.internal.Original;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -16,6 +17,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
+ *
+ *
+ *
+ *
+ *
+ *
+ *
  * @author reco@jackstaff.org
  */
 public class MessageChannel<T> implements Consumer<T> {
@@ -29,22 +37,44 @@ public class MessageChannel<T> implements Consumer<T> {
     private Packet<Throwable> status;
     private StreamObserver<Packet<?>> observer;
 
+    /**
+     *
+     * @param consumer
+     */
     public MessageChannel(Consumer<T> consumer) {
         this.consumer = consumer;
         this.status = new Packet<>();
     }
 
+    /**
+     *
+     * @param consumer
+     * @param errorMessage
+     */
     public MessageChannel(Consumer<T> consumer, @Nonnull T errorMessage) {
         this(consumer);
         this.errorMessage = errorMessage;
     }
 
+    /**
+     *
+     * @param consumer
+     * @param timeout
+     * @param timeoutMessage
+     */
     public MessageChannel(Consumer<T> consumer, @Nonnull Duration timeout, @Nonnull T timeoutMessage) {
         this(consumer);
         this.timeout = timeout;
         this.timeoutMessage = timeoutMessage;
     }
 
+    /**
+     *
+     * @param consumer
+     * @param errorMessage
+     * @param timeout
+     * @param timeoutMessage
+     */
     public MessageChannel(Consumer<T> consumer, @Nonnull T errorMessage, @Nonnull Duration timeout, @Nonnull T timeoutMessage) {
         this(consumer, timeout, timeoutMessage);
         this.errorMessage = errorMessage;
@@ -66,28 +96,44 @@ public class MessageChannel<T> implements Consumer<T> {
         return consumer instanceof MessageChannel ? (MessageChannel<?>) consumer : new MessageChannel<>(consumer);
     }
 
+    /**
+     * send the message to another side
+     * @param message payload
+     */
     @Override
-    public void accept(@Nonnull T t) {
+    public void accept(@Nonnull T message) {
         if (isClosed()) {
             throw new StatusException(""+status.getCommand());
         }
-        acceptMessage(t);
+        acceptMessage(message);
     }
 
+    /**
+     * close the channel if the channel is not closed
+     */
     public void done() {
         if (!isClosed()){
             if (observer != null){
                 onNext(new Packet<>(Command.COMPLETED));
+                observer.onCompleted();
             }
             close(Command.COMPLETED);
         }
     }
 
+    /**
+     *
+     * @return
+     */
     public boolean isClosed() {
-        return status.getCommand() != Command.OK;
+        return !status.isOk();
     }
 
-    public Throwable getError() {
+    /**
+     *
+     * @return
+     */
+    public @Nullable Throwable getError() {
         return status.getPayload();
     }
 
@@ -114,6 +160,7 @@ public class MessageChannel<T> implements Consumer<T> {
 
     void close(int command) {
         if (!isClosed()) {
+            status.setCommand(command);
             switch (command) {
                 case Command.EXCEPTION:
                 case Command.UNREACHABLE:
@@ -124,18 +171,11 @@ public class MessageChannel<T> implements Consumer<T> {
                     break;
             }
         }
-        if (status.getCommand() < command){
-            status.setCommand(command);
-        }
     }
 
     void acceptMessage(Object t) {
-        if (t==null || isClosed()) {
-            return;
-        }
-        directAccept(t);
-        if (t instanceof Completable && ((Completable) t).isCompleted()) {
-            this.close(Command.COMPLETED);
+        if (t !=null && !isClosed()) {
+            directAccept(t);
         }
     }
 
@@ -170,7 +210,11 @@ public class MessageChannel<T> implements Consumer<T> {
 
     @Override
     public String toString() {
-        return "MessageChannel{status='" + status.commandName() + "'}";
+        return "MessageChannel{" +
+                "closed=" + isClosed() +
+                ", status=" + status.commandName() +
+                Optional.ofNullable(status.getPayload()).map(e->",error="+e).orElse("")+
+                '}';
     }
 
 }

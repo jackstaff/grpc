@@ -1,7 +1,7 @@
 package org.jackstaff.grpc.internal;
 
 import io.grpc.CallOptions;
-import io.grpc.Channel;
+import io.grpc.ManagedChannel;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.StreamObserver;
 import org.jackstaff.grpc.Packet;
@@ -15,13 +15,19 @@ import java.util.Iterator;
  */
 public class PacketStub<S extends AbstractStub<S>> {
 
+    private ManagedChannel channel;
     private InternalBlockingStub blockingStub;
     private InternalStub asyncStub;
     private S stub;
 
-    public PacketStub(String authority, Channel channel){
+    public PacketStub(String authority, ManagedChannel channel){
+        this.channel = channel;
         this.blockingStub = InternalGrpc.newBlockingStub(channel).build(channel, CallOptions.DEFAULT.withAuthority(authority));
         this.asyncStub = InternalGrpc.newStub(channel).build(channel, CallOptions.DEFAULT.withAuthority(authority));
+    }
+
+    public ManagedChannel getChannel() {
+        return channel;
     }
 
     @SuppressWarnings("unchecked")

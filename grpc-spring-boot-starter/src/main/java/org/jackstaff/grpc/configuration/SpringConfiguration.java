@@ -6,6 +6,9 @@ import org.jackstaff.grpc.annotation.Server;
 import org.jackstaff.grpc.exception.ValidationException;
 import org.springframework.cglib.proxy.Proxy;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Field;
@@ -51,6 +54,10 @@ public class SpringConfiguration {
                 Arrays.stream(services).forEach(type->server.register((Class)type, bean, SpringConfiguration.getInterceptors(s.interceptor())));
             });
             server.start(cfg);
+            if (appContext instanceof ConfigurableApplicationContext){
+                ConfigurableApplicationContext ctx = ((ConfigurableApplicationContext) appContext);
+                ctx.addApplicationListener((ApplicationListener<ContextClosedEvent>) evt -> server.shutdown());
+            }
         });
         return server;
     }
@@ -60,6 +67,10 @@ public class SpringConfiguration {
                 Proxy.newProxyInstance(type.getClassLoader(), new Class[]{type}, handler::invoke));
         Optional.ofNullable(configuration.getClient()).ifPresent(client::setup);
         appContext.getBeansWithAnnotation(Component.class).forEach((name, bean) -> inject(client, name, bean));
+        if (appContext instanceof ConfigurableApplicationContext){
+            ConfigurableApplicationContext ctx = ((ConfigurableApplicationContext) appContext);
+            ctx.addApplicationListener((ApplicationListener<ContextClosedEvent>) evt -> client.shutdown());
+        }
         return client;
     }
 

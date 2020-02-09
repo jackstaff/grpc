@@ -17,6 +17,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
+import java.util.stream.IntStream;
 
 @Server(service = AdvancedHelloService.class, interceptor = {LoggerInfo.class, Authorization.class})
 public class MyAdvancedHelloService implements AdvancedHelloService {
@@ -61,10 +62,14 @@ public class MyAdvancedHelloService implements AdvancedHelloService {
             schedule.schedule(()->{
                 HelloResponse response =new HelloResponse("lotsOfReplies(ServerStreaming)"+index+":"+greeting.charAt(index));
                 if (channel.isClosed()){
-                    logger.info("channel closed，{}, response NOT sent {}", channel, response);
+                    logger.info("server streaming channel closed，{}, response NOT sent {}", channel, response);
                     return;
                 }
                 channel.accept(response);
+                if (index == greeting.length() -1){
+                    channel.done();
+                    logger.info("server streaming channel done/completed");
+                }
             }, index+1, TimeUnit.SECONDS);
         }
     }
@@ -99,23 +104,29 @@ public class MyAdvancedHelloService implements AdvancedHelloService {
             logger.info("MyAdvancedHelloService.bidiHello receive bidi streaming, helloRequest:{}", request);
         };
 
-        MessageChannel<HelloResponse> channel = (MessageChannel<HelloResponse>) replies;
+        MessageChannel<HelloResponse> bisChannel = (MessageChannel<HelloResponse>) replies;
         logger.info("if you shutdown the client in {}seconds, channell.isClosed()=closed", timeoutSeconds);
         for (int i = 0; i < socialInfo.getFriends().size(); i++) {
             int index = i;
             schedule.schedule(()->{
                 HelloResponse response =new HelloResponse("bidiHello(BidiStreaming), hello, "+socialInfo.getFriends().get(index));
-                if (channel.isClosed()){
-                    logger.info("channel closed，{}, response NOT sent {}", channel, response);
+                if (bisChannel.isClosed()){
+                    logger.info("bidi channel closed，{}, response NOT sent {}", bisChannel, response);
                     return;
                 }
-                channel.accept(response);
+                bisChannel.accept(response);
                 if (index == socialInfo.getFriends().size()-1){
-                    channel.done();
+                    bisChannel.done();
+                    logger.info("bidi channel done/completed");
                 }
             }, index+1, TimeUnit.SECONDS);
         }
-        return new MessageChannel<>(consumer, errorMessage, Duration.ofSeconds(timeoutSeconds), timeoutMessage);
+        MessageChannel<HelloRequest> bicChannel= new MessageChannel<>(consumer, errorMessage, Duration.ofSeconds(timeoutSeconds), timeoutMessage);
+        IntStream.range(1, 60).forEach(i->schedule.schedule(()->{
+            logger.info("bidi hello bisChannel "+bisChannel);
+            logger.info("bidi hello bicChannel "+bicChannel);
+        }, i, TimeUnit.SECONDS));
+        return bicChannel;
 
     }
 
