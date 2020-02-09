@@ -4,6 +4,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.Map;
 
+/**
+ * @author reco@jackstaff.org
+ */
 @ConfigurationProperties(prefix = "spring.grpc")
 public class Configuration {
 

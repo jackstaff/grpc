@@ -16,6 +16,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+/**
+ * Spring Configuration for Jackstaff RPC
+ * @author reco@jackstaff.org
+ */
 public class SpringConfiguration {
 
     private static final Map<Class<? extends Interceptor>, Interceptor> interceptors = new ConcurrentHashMap<>();
