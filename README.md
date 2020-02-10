@@ -30,7 +30,27 @@ Step 2: Implements protocol interface(at "server side micro service" project):
 import org.jackstaff.grpc.annotation.Server;
 @Server(HelloService.class)
 public class MyHelloService implements HelloService {
-//todo implements
+
+    @Override
+    public String sayHello(String greeting) {
+        //todo
+    }
+
+    @Override
+    public void lotsOfReplies(String greeting, Consumer<String> replies) {
+        //todo
+    }
+
+    @Override
+    public Consumer<String> lotsOfGreetings(SocialInfo socialInfo) {
+        //todo
+    }
+
+    @Override
+    public Consumer<HelloRequest> bidiHello(SocialInfo socialInfo, Consumer<HelloResponse> replies) {
+        //todo
+    }
+
 }
 ```
 
