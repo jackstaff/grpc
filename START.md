@@ -1,9 +1,11 @@
 Jackstaff gRPC framework
 ====
+
 [Quick Starts](https://github.com/jackstaff/grpc/blob/master/START.md)  
 [Advance Usage](https://github.com/jackstaff/grpc/blob/master/ADVANCE.md)  
 [Origin](https://github.com/jackstaff/grpc/blob/master/ORIGIN.md)
 [Road Map](https://github.com/jackstaff/grpc/blob/master/V2.md) 
+
 Quick Starts: 
 
 Step 0: Initial a spring project  and import grpc-spring-boot-starter
@@ -48,12 +50,12 @@ public class MyHelloService implements HelloService {
     }
 
     @Override
-    public Consumer<String> lotsOfGreetings(SocialInfo socialInfo) {
+    public Consumer<String> lotsOfGreetings(List<String> friends) {
         //todo
     }
 
     @Override
-    public Consumer<HelloRequest> bidiHello(SocialInfo socialInfo, Consumer<HelloResponse> replies) {
+    public Consumer<String> bidiHello(List<String> friends, Consumer<String> replies) {
         //todo
     }
 
