@@ -2,6 +2,7 @@ package org.jackstaff.grpc.demo;
 
 import java.util.function.Consumer;
 
+
 public interface HelloService {
 
     String sayHello(String greeting); //Unary RPCs
