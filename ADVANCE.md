@@ -6,7 +6,7 @@ Jackstaff gRPC framework
 Advance Usage: 
 1. Monitor status in ClientStreaming/ServerStreaming/BidirectionalStreaming:
 ```java
-//isClosed() and getError()
+//isClosed() and getError(), done()
 
 ```
 
@@ -52,13 +52,3 @@ spring:
         idleTimeout: 1800
 ```
 
-
-Step 5: Config "client side " application.yml:
-```yml
-spring:
-  grpc:
-    server:
-      port: 9000
-```
-
-done.
