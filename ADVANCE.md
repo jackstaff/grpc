@@ -50,7 +50,7 @@ public class MyHelloService implements HelloService {
     public void lotsOfReplies(String greeting, Consumer<String> replies) {
         MessageChannel<String> channel = (MessageChannel<String>) replies;
         final int count =100;
-        IntStream.range(1, count).forEach(i->{
+        IntStream.range(1, count+1).forEach(i->{
             schedule.schedule(()->{
                 if (channel.isClosed()){ //check the channel closed status
                     System.out.println("channel closed:"+channel);
