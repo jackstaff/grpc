@@ -76,7 +76,7 @@ public class MyClientService {
 }
 ```
 
-Step 4: Config "server side " application.yml:
+Step 4: Config "client side " application.yml:
 ```yml
 spring:
   grpc:
@@ -87,7 +87,7 @@ spring:
 ```
 
 
-Step 5: Config "client side " application.yml:
+Step 5: Config "server side " application.yml:
 ```yml
 spring:
   grpc:
