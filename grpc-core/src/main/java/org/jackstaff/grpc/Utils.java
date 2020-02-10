@@ -21,8 +21,7 @@ class Utils {
                 for (int j = i-1; j >= 0 ; j--) {
                     try {
                         interceptors.get(j).recall(context, exception);
-                    }catch (Exception ex){
-                        ex.printStackTrace();
+                    }catch (Exception ignore){
                     }
                 }
                 return Packet.throwable(exception);
