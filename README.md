@@ -1,6 +1,6 @@
 Jackstaff gRPC framework
 ====
-Quick Start:
+Quick Starts:
 
 Step 0: Initial a spring project  and import grpc-spring-boot-starter
 ```xml
