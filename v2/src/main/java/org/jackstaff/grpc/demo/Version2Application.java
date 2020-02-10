@@ -13,7 +13,6 @@ public class Version2Application {
 
     public static void main(String[] args) throws Exception{
         ApplicationContext appContext = SpringApplication.run(Version2Application.class, args);
-
         new DelayQueue<>().take();
     }
 
