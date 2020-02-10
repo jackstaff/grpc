@@ -170,7 +170,17 @@ public class MyHelloService implements HelloService {
 
 3. Asynchronous unary call:
 ```java
+public interface HelloService {
 
+    //it's a flag annotation, indicate the unary method will call as asynchronous.
+    @AsynchronousUnary
+    void postMessage(String message);
+    
+    //for server streaming, it indicate the Consumer will closed after call Consumer.accept() only one times
+    @AsynchronousUnary
+    void onlyOneReply(String greeting, Consumer<String> reply);
+    
+}
 ```
 
 4. Config gRPC property in application.yml:
