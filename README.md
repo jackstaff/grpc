@@ -1,6 +1,8 @@
 A java RPC framework, gRPC based and compatible with gRPC
 ====
-Step 0: [Initial a spring project](https://start.spring.io/) and import grpc-spring-boot-starter
+Quick Start:
+
+Step 0: Initial a spring project  and import grpc-spring-boot-starter
 ```xml
 <!-- https://mvnrepository.com/artifact/org.jackstaff.grpc/grpc-spring-boot-starter -->
 <dependency>
@@ -54,14 +56,14 @@ public class MyHelloService implements HelloService {
 }
 ```
 
-Step 3: use protocol interface(at "client side micro service" project):
+Step 3: Use protocol interface (at "client side micro service" project):
 ```java
 import org.jackstaff.grpc.annotation.Client;
 
 @Service
 public class MyClientService {
 
-    @Client(authority = "my-server") //mapping to config file.
+    @Client(authority = "my-server") 
     private HelloService helloService;
 
     public String sayHello(String greeting){
@@ -71,7 +73,7 @@ public class MyClientService {
 }
 ```
 
-Step 4:  config "server side " application.yml:
+Step 4: Config "server side " application.yml:
 ```yml
 spring:
   grpc:
@@ -82,7 +84,7 @@ spring:
 ```
 
 
-Step 5:  config "client side " application.yml:
+Step 5: Config "client side " application.yml:
 ```yml
 spring:
   grpc:
