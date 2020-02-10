@@ -5,7 +5,7 @@ Jackstaff gRPC framework
 
 Quick Starts: 
 
-Step 0: Initial a spring project  and import grpc-spring-boot-starter
+Step 0: Import grpc-spring-boot-starter in pom.xml
 ```xml
 <!-- https://mvnrepository.com/artifact/org.jackstaff.grpc/grpc-spring-boot-starter -->
 <dependency>
