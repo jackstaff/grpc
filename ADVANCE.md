@@ -83,8 +83,11 @@ public class MyHelloService implements HelloService {
 
 ```
 
-2. Interceptor:
+2. Interceptor & Context:
 ```java
+import org.jackstaff.grpc.Context;
+import org.jackstaff.grpc.Interceptor;
+
 public class Credential implements Interceptor {
 
     @Override
