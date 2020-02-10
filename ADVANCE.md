@@ -176,7 +176,7 @@ public interface HelloService {
     @AsynchronousUnary
     void postMessage(String message);
     
-    //for server streaming, it indicate the Consumer will closed after call Consumer.accept() only one times
+    //for server streaming, it indicate the channel will closed after call Consumer.accept() only one times
     @AsynchronousUnary
     void onlyOneReply(String greeting, Consumer<String> reply);
     
