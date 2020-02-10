@@ -1,4 +1,4 @@
-A java RPC framework, gRPC based and compatible with gRPC
+Jackstaff gRPC framework
 ====
 Quick Start:
 
