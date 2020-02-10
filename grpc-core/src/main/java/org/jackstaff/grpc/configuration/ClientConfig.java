@@ -1,5 +1,8 @@
 package org.jackstaff.grpc.configuration;
 
+/**
+ * @author reco@jackstaff.org
+ */
 public class ClientConfig {
 
     private String host;

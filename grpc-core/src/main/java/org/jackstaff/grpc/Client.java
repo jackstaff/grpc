@@ -17,7 +17,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * the client side delegate
  * @author reco@jackstaff.org
+ * @see Interceptor
+ * @see ClientConfig
  */
 public class Client {
 
@@ -29,14 +32,25 @@ public class Client {
     private final Map<String, PacketStub<?>> stubs = new ConcurrentHashMap<>();
     private final ProxyCreator creator;
 
+    /**
+     * default, will use jdk's Proxy
+     */
     public Client() {
         this((type, handler) -> Proxy.newProxyInstance(type.getClassLoader(), new Class[]{type}, handler));
     }
 
+    /**
+     * use provided ProxyCreator, like CGLib's Proxy
+     * @param creator the creator
+     */
     public Client(ProxyCreator creator){
         this.creator = creator;
     }
 
+    /**
+     * setup the client stub
+     * @param authorityClients the config
+     */
     public void setup(Map<String, ClientConfig> authorityClients){
         authorityClients.forEach((authority, cfg)->{
             NettyChannelBuilder builder = NettyChannelBuilder.forAddress(cfg.getHost(), cfg.getPort());
@@ -63,6 +77,15 @@ public class Client {
         });
     }
 
+    /**
+     * delegate a "protocol interface" type which the server run at "authority" machine
+     * @param authority the micro service / machine / VM name in config
+     * @param type the "protocol interface"
+     * @param required if required
+     * @param interceptors the Interceptor list
+     * @param <T> T
+     * @return autowired proxy instance
+     */
     public <T> T autowired(String authority, Class<T> type, boolean required, List<Interceptor> interceptors) {
         PacketStub<?> packetStub = stubs.get(authority);
         if (packetStub ==null){

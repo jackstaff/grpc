@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.function.Consumer;
 
 /**
+ * the package for interact client side and server side
  * @author reco@jackstaff.org
  */
 public class Packet<T> implements Command {

@@ -17,14 +17,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
- *
- *
- *
- *
- *
- *
- *
+ * MessageChannel implements the Consumer which for (Client/Server/Bidi) Streaming
  * @author reco@jackstaff.org
+ *
  */
 public class MessageChannel<T> implements Consumer<T> {
 
@@ -37,31 +32,16 @@ public class MessageChannel<T> implements Consumer<T> {
     private Packet<Throwable> status;
     private StreamObserver<Packet<?>> observer;
 
-    /**
-     *
-     * @param consumer
-     */
     public MessageChannel(Consumer<T> consumer) {
         this.consumer = consumer;
         this.status = new Packet<>();
     }
 
-    /**
-     *
-     * @param consumer
-     * @param errorMessage
-     */
     public MessageChannel(Consumer<T> consumer, @Nonnull T errorMessage) {
         this(consumer);
         this.errorMessage = errorMessage;
     }
 
-    /**
-     *
-     * @param consumer
-     * @param timeout
-     * @param timeoutMessage
-     */
     public MessageChannel(Consumer<T> consumer, @Nonnull Duration timeout, @Nonnull T timeoutMessage) {
         this(consumer);
         this.timeout = timeout;
@@ -69,11 +49,14 @@ public class MessageChannel<T> implements Consumer<T> {
     }
 
     /**
+     * prepare the errorMessage and timeoutMessage for message channel,
+     * the consumer will receive this errorMessage if there is an error in the channel (like network error).
+     * and the consumer will receive this timeoutMessage if the "done()" is not called in time-out.
      *
-     * @param consumer
-     * @param errorMessage
-     * @param timeout
-     * @param timeoutMessage
+     * @param consumer the consumer
+     * @param errorMessage the error Message
+     * @param timeout the timeout
+     * @param timeoutMessage the timeout Message
      */
     public MessageChannel(Consumer<T> consumer, @Nonnull T errorMessage, @Nonnull Duration timeout, @Nonnull T timeoutMessage) {
         this(consumer, timeout, timeoutMessage);
@@ -109,7 +92,7 @@ public class MessageChannel<T> implements Consumer<T> {
     }
 
     /**
-     * close the channel if the channel is not closed
+     * close/complete the channel if the channel is not closed
      */
     public void done() {
         if (!isClosed()){
@@ -123,7 +106,7 @@ public class MessageChannel<T> implements Consumer<T> {
 
     /**
      *
-     * @return
+     * @return indicate the channel closed status.
      */
     public boolean isClosed() {
         return !status.isOk();
@@ -131,7 +114,7 @@ public class MessageChannel<T> implements Consumer<T> {
 
     /**
      *
-     * @return
+     * @return exception if channel close and receive error.
      */
     public @Nullable Throwable getError() {
         return status.getPayload();

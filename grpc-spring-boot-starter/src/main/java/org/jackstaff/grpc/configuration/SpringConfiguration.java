@@ -17,8 +17,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Spring Configuration for Jackstaff RPC
+ * Spring Configuration for Jackstaff RPC Framework
  * @author reco@jackstaff.org
+ * @see Configuration
  */
 public class SpringConfiguration {
 

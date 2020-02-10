@@ -1,6 +1,7 @@
 package org.jackstaff.grpc.internal;
 
 import io.grpc.CallOptions;
+import io.grpc.Internal;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.StreamObserver;
@@ -13,6 +14,7 @@ import java.util.Iterator;
 /**
  * @author reco@jackstaff.org
  */
+@Internal
 public class PacketStub<S extends AbstractStub<S>> {
 
     private ManagedChannel channel;

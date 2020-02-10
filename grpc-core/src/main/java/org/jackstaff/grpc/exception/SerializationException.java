@@ -1,6 +1,7 @@
 package org.jackstaff.grpc.exception;
 
 /**
+ *
  * @author reco@jackstaff.org
  */
 public class SerializationException extends RuntimeException {

@@ -1,6 +1,7 @@
 package org.jackstaff.grpc.internal;
 
 import com.google.protobuf.ByteString;
+import io.grpc.Internal;
 import io.grpc.stub.StreamObserver;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtostuffIOUtil;
@@ -16,6 +17,7 @@ import java.util.Optional;
 /**
  * @author reco@jackstaff.org
  */
+@Internal
 public class Transform {
 
     private static final IdStrategy idStrategy= new DefaultIdStrategy(

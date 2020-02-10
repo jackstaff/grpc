@@ -1,7 +1,12 @@
 package org.jackstaff.grpc;
 
+import io.grpc.Internal;
 import io.grpc.stub.StreamObserver;
 
+/**
+ * @author reco@jackstaff.org
+ */
+@Internal
 class MessageObserver implements StreamObserver<Packet<?>> {
 
     private final MessageChannel<?> channel;

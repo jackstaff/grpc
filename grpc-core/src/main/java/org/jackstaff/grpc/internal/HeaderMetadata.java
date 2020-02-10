@@ -1,9 +1,6 @@
 package org.jackstaff.grpc.internal;
 
-import io.grpc.Attributes;
-import io.grpc.Context;
-import io.grpc.Grpc;
-import io.grpc.Metadata;
+import io.grpc.*;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.MetadataUtils;
 
@@ -12,6 +9,7 @@ import java.util.Optional;
 /**
  * @author reco@jackstaff.org
  */
+@Internal
 public class HeaderMetadata<T> {
 
     public static final String AUTHORITY = "authority";

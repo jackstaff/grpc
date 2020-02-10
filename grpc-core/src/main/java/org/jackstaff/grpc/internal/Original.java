@@ -3,6 +3,9 @@ package org.jackstaff.grpc.internal;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+/**
+ * @author reco@jackstaff.org
+ */
 @FunctionalInterface
 public interface Original<T> {
 

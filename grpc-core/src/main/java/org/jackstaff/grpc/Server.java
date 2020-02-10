@@ -18,13 +18,24 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
+ * the server
  * @author reco@jackstaff.org
+ *
+ * @see Interceptor
+ * @see ServerConfig
  */
 public class Server {
 
     private final Map<String, MethodDescriptor> methods = new ConcurrentHashMap<>();
     private io.grpc.Server server;
 
+    /**
+     * register a "protocol interface" type which implements by bean
+     * @param type the "protocol interface"
+     * @param bean the implements bean
+     * @param interceptors the Interceptor list
+     * @param <T> T
+     */
     public <T> void register(Class<T> type, T bean, List<Interceptor> interceptors) {
         if (!type.isInstance(bean)){
             throw new ValidationException(bean.getClass().getName()+ " does NOT instanceof "+type.getName());
@@ -33,6 +44,10 @@ public class Server {
                 forEach(info -> methods.put(info.getSign(), info));
     }
 
+    /**
+     * start server
+     * @param cfg server config
+     */
     public void start(ServerConfig cfg) {
         NettyServerBuilder builder = NettyServerBuilder.forPort(cfg.getPort()).addService(bindService(
                 new PacketServerGrpc(this::unary, this::serverStreaming, this::clientStreaming, this::bidiStreaming)));
@@ -69,6 +84,9 @@ public class Server {
         }
     }
 
+    /**
+     * shutdown when application shutdown
+     */
     public void shutdown() {
         Optional.ofNullable(server).ifPresent(io.grpc.Server::shutdown);
     }

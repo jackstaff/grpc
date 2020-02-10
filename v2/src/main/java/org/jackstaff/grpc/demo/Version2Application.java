@@ -12,9 +12,8 @@ import java.util.concurrent.DelayQueue;
 public class Version2Application {
 
     public static void main(String[] args) throws Exception{
-        ApplicationContext appContext = SpringApplication.run(Version2Application.class, args);
-        
-        new DelayQueue<>().take();
+       // ApplicationContext appContext = SpringApplication.run(Version2Application.class, args);
+        System.out.println("Version 2 Pre-research");
     }
 
 }

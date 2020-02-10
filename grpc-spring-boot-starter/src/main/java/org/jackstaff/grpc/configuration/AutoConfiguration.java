@@ -8,8 +8,10 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 
 /**
- * Spring Boot Auto Configuration for Jackstaff RPC
+ * Spring Boot Auto Configuration for Jackstaff RPC Framework
  * @author reco@jackstaff.org
+ * @see SpringConfiguration
+ * @see Configuration
  */
 
 @org.springframework.context.annotation.Configuration

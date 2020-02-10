@@ -1,10 +1,16 @@
 package org.jackstaff.grpc;
 
+import io.grpc.Internal;
+
 import javax.annotation.Nonnull;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 
+/**
+ * @author reco@jackstaff.org
+ */
+@Internal
 class Utils {
 
     static @Nonnull Packet<?> before(Context context, List<Interceptor> interceptors) {
@@ -42,16 +48,15 @@ class Utils {
     }
 
     static void after(Context context, List<Interceptor> interceptors, Packet<?> packet) {
-        try {
-            for (int i = interceptors.size()-1; i >=0 ; i--) {
+        for (Interceptor interceptor: interceptors){
+            try {
                 if (packet.isException()) {
-                    interceptors.get(i).throwing(context, (Exception) packet.getPayload());
+                    interceptor.throwing(context, (Exception) packet.getPayload());
                 }else {
-                    interceptors.get(i).returning(context, packet.getPayload());
+                    interceptor.returning(context, packet.getPayload());
                 }
+            }catch (Exception ignore){
             }
-        }catch (Exception ex){
-            ex.printStackTrace();
         }
     }
 
