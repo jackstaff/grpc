@@ -185,6 +185,7 @@ public interface HelloService {
 
 4. Config gRPC property in application.yml:
 ```yml
+//the time unit is second.
 spring:
   grpc:
     server:
