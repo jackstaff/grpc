@@ -20,6 +20,8 @@ public class MyHelloClientService {
         String timeoutMessage = new String("TIMEOUT_MESSAGE");
         //it will receive error message if the network error/unreachable...
         String errorMessage = new String("ERROR/EXCEPTION_MESSAGE");
+        //it will receive complete message if the server side call "done()"
+        String completeMessage = new String("COMPLETE_MESSAGE");
         Consumer<String> replies = message->{
             if (message == errorMessage){ // or use message.equals(errorMessage)
                 System.out.println("there are error happen");
@@ -29,11 +31,15 @@ public class MyHelloClientService {
                 System.out.println("time out");
                 return;
             }
+            if (message == completeMessage){ // or use message.equals(completeMessage)
+                System.out.println("completed");
+                return;
+            }
             // process message
             System.out.println("the client side receive: "+message);
         };
         MessageChannel<String> channel = new MessageChannel<>(replies,
-                errorMessage, Duration.ofSeconds(timeoutSeconds), timeoutMessage);
+                errorMessage, completeMessage, Duration.ofSeconds(timeoutSeconds), timeoutMessage);
         helloService.lotsOfReplies(greeting, channel);
     }
 
@@ -211,6 +217,6 @@ spring:
         keep-alive-without-calls: true
         max-inbound-message-size: 4194304
         max-retry-attempts: 0
-        idleTimeout: 1800
+        idle-timeout: 1800
 ```
 
