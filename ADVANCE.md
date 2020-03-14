@@ -217,6 +217,6 @@ spring:
         keep-alive-without-calls: true
         max-inbound-message-size: 4194304
         max-retry-attempts: 0
-        idleTimeout: 1800
+        idle-timeout: 1800
 ```
 
