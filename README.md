@@ -58,7 +58,7 @@ public class MyHelloService implements HelloService {
     @Override
     public Consumer<String> bidiHello(List<String> friends, Consumer<String> replies) {
         //todo
-        friends.forEach(friend->replies.accept("hi "+ friend));
+        CompletableFuture.runAsync(()-> friends.forEach(friend->replies.accept("hi "+ friend)));
         return s-> System.out.println(s);
     }
 
