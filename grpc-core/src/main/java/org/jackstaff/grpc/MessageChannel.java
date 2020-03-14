@@ -101,7 +101,8 @@ public class MessageChannel<T> implements Consumer<T> {
     }
 
     /**
-     * close/complete the channel if the channel is not closed
+     * close/complete the channel if the channel is not closed.
+     * the client will receive "completeMessage" if it's exist
      */
     public void done() {
         if (!isClosed()){
