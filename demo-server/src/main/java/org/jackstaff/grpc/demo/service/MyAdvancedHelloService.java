@@ -36,8 +36,8 @@ public class MyAdvancedHelloService implements AdvancedHelloService {
     @Override
     public void postMessage(String message, Consumer<String> result) {
         logger.info("MyAdvancedHelloService.postMessage receive: {}, will Consumer.accept() after {} seconds", message, message.length());
-        LockSupport.parkNanos(TimeUnit.SECONDS.toSeconds(message.length()));
         result.accept("AdvancedHelloService echo:"+message);
+        logger.info("AdvancedHelloService.postMessage....channel.isClosed()="+((MessageChannel<?>) result).isClosed());
     }
 
     @Override
@@ -78,18 +78,20 @@ public class MyAdvancedHelloService implements AdvancedHelloService {
     public Consumer<HelloRequest> lotsOfGreetings(SocialInfo socialInfo) {
         logger.info("MyAdvancedHelloService.lotsOfGreetings receive: {}", socialInfo);
         int timeoutSeconds = 60;
+        HelloRequest completeMessage = new HelloRequest("I (the server side) receive this when complete ");
         HelloRequest timeoutMessage = new HelloRequest("I (the server side) receive this when timeout ");
         HelloRequest errorMessage = new HelloRequest("I (the server side) receive this when error");
         Consumer<HelloRequest> consumer = request -> {
             logger.info("MyAdvancedHelloService.lotsOfGreetings receive client streaming, helloRequest:{}", request);
         };
-        return new MessageChannel<>(consumer, errorMessage, Duration.ofSeconds(timeoutSeconds), timeoutMessage);
+        return new MessageChannel<>(consumer, errorMessage, completeMessage, Duration.ofSeconds(timeoutSeconds), timeoutMessage);
     }
 
     @Override
     public Consumer<HelloRequest> bidiHello(SocialInfo socialInfo, Consumer<HelloResponse> replies) {
         logger.info("MyAdvancedHelloService.bidiHello receive: {}", socialInfo);
         int timeoutSeconds = 30;
+        HelloRequest completeMessage = new HelloRequest("I (the server side) receive this when complete ");
         HelloRequest timeoutMessage = new HelloRequest("I (the server side) receive this when timeout ");
         HelloRequest errorMessage = new HelloRequest("I (the server side) receive this when error");
         Consumer<HelloRequest> consumer = request -> {
@@ -121,7 +123,7 @@ public class MyAdvancedHelloService implements AdvancedHelloService {
                 }
             }, index+1, TimeUnit.SECONDS);
         }
-        MessageChannel<HelloRequest> bicChannel= new MessageChannel<>(consumer, errorMessage, Duration.ofSeconds(timeoutSeconds), timeoutMessage);
+        MessageChannel<HelloRequest> bicChannel= new MessageChannel<>(consumer, errorMessage, completeMessage, Duration.ofSeconds(timeoutSeconds), timeoutMessage);
         IntStream.range(1, 60).forEach(i->schedule.schedule(()->{
             logger.info("bidi hello bisChannel "+bisChannel);
             logger.info("bidi hello bicChannel "+bicChannel);

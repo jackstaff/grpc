@@ -19,6 +19,8 @@ import java.util.Map;
  * #      max-connection-idle: 0
  * #      max-connection-age: 0
  * #      max-connection-age-grace: 0
+ * #      kye-cert-chain: /server.crt
+ * #      private-key: /pkcs8_key.pem
  *     client:
  *       demo-server:
  *         host: localhost

@@ -129,14 +129,14 @@ public class Client {
                     stub.asynchronousUnary(Packet.boxing(context.getArguments()));
                     return new Packet<>();
                 case UnaryStreaming:
-                    MessageChannel<?> usChannel = info.getChannel(context.getArguments()).ready();
+                    MessageChannel<?> usChannel = info.getChannel(context.getArguments());
                     MessageObserver usObserver = new MessageObserver(usChannel);
-                    stub.unaryStreaming(Packet.boxing(usChannel.getTimeoutSeconds(), context.getArguments()), usObserver);
+                    stub.unaryStreaming(Packet.boxing(usChannel.getTimeoutMillSeconds(), context.getArguments()), usObserver);
                     return new Packet<>();
                 case ServerStreaming:
-                    MessageChannel<?> ssChannel = info.getChannel(context.getArguments()).ready();
+                    MessageChannel<?> ssChannel = info.getChannel(context.getArguments());
                     MessageObserver ssObserver = new MessageObserver(ssChannel);
-                    stub.serverStreaming(Packet.boxing(ssChannel.getTimeoutSeconds(), context.getArguments()), ssObserver);
+                    stub.serverStreaming(Packet.boxing(ssChannel.getTimeoutMillSeconds(), context.getArguments()), ssObserver);
                     return new Packet<>();
                 case ClientStreaming:
                     stub.attach(HeaderMetadata.BINARY_ROOT, Transform.toBinary(Packet.boxing(context.getArguments())));
@@ -144,9 +144,9 @@ public class Client {
                     MessageChannel<?> csChannel = new MessageChannel<>(stub.clientStreaming(csObserver));
                     csObserver.link(csChannel);
                     return Packet.ok(csChannel);
-                case BiStreaming:
-                    MessageChannel<?> bsChannel = info.getChannel(context.getArguments()).ready();
-                    stub.attach(HeaderMetadata.BINARY_ROOT, Transform.toBinary(Packet.boxing(bsChannel.getTimeoutSeconds(), context.getArguments())));
+                case BidiStreaming:
+                    MessageChannel<?> bsChannel = info.getChannel(context.getArguments());
+                    stub.attach(HeaderMetadata.BINARY_ROOT, Transform.toBinary(Packet.boxing(bsChannel.getTimeoutMillSeconds(), context.getArguments())));
                     MessageObserver bsObserver = new MessageObserver(bsChannel);
                     MessageChannel<?> channel = new MessageChannel<>(stub.bidiStreaming(bsObserver));
                     bsObserver.link(channel);

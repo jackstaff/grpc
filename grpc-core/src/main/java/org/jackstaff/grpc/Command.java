@@ -1,11 +1,8 @@
 package org.jackstaff.grpc;
 
-import io.grpc.Internal;
-
 /**
  * @author reco@jackstaff.org
  */
-@Internal
 interface Command {
 
     int OK = 0;

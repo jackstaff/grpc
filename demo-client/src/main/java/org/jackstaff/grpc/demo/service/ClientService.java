@@ -6,7 +6,6 @@ import org.jackstaff.grpc.demo.*;
 import org.jackstaff.grpc.demo.common.interceptor.Credential;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
@@ -33,13 +32,13 @@ public class ClientService {
     @Client(authority = Constant.DEMO_SERVER, interceptor = Credential.class)
     private AdvancedHelloService advancedHelloService;
 
-    public void walkThrough() {
+    public void walkThrough() throws Exception{
         walkThroughHelloService();
         LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(20));
         walkThroughAdvanceHelloService();
     }
 
-    public void walkThroughHelloService() {
+    public void walkThroughHelloService()  throws Exception{
         logger.info("........helloService..........");
         String reply = helloService.sayHello("hello world.");
         logger.info("sayHello..result {}", reply);
@@ -92,7 +91,7 @@ public class ClientService {
 
     }
 
-    public void walkThroughAdvanceHelloService(){
+    public void walkThroughAdvanceHelloService() throws Exception{
         logger.info("........advancedHelloService..........");
 
         logger.info("sayHello reply:"+advancedHelloService.sayHello("hello"));
@@ -102,6 +101,7 @@ public class ClientService {
         logger.info("end postMessage.."+now());
 
         logger.info("start lotsOfReplies (server streaming)..");
+        HelloResponse ssCompleteMessage = new HelloResponse("I (the client side) receive this when complete");
         HelloResponse ssErrorMessage = new HelloResponse("I (the client side) receive this when error");
         HelloResponse ssTimeoutMessage = new HelloResponse("I (the client side) receive this when timeout");
         Consumer<HelloResponse> ssConsumer = response -> {
@@ -115,7 +115,7 @@ public class ClientService {
 //        String ssGreeting = "hello friends!, it will timeout because this string.length() > ssTimeoutSeconds";
         String ssGreeting = "hello!";
         MessageChannel<HelloResponse> ssChannel = new MessageChannel<>(ssConsumer,
-                ssErrorMessage, Duration.ofSeconds(ssTimeoutSeconds), ssTimeoutMessage);
+                ssErrorMessage, ssCompleteMessage, Duration.ofSeconds(ssTimeoutSeconds), ssTimeoutMessage);
         advancedHelloService.lotsOfReplies(ssGreeting, ssChannel);
         IntStream.range(1, 60).forEach(i->schedule.schedule(()->{
             logger.info("lotsOfReplies.(server streaming) channel "+ssChannel);
@@ -156,6 +156,7 @@ public class ClientService {
         biSocialInfo.setFriends(Arrays.asList("reco", "lily", "laura", "yellow", "red", "black", "white"));
         logger.info("bidiHello send friend list: "+biSocialInfo.getFriends());
 
+        HelloResponse bisCompleteMessage = new HelloResponse("I (the client side) receive this when complete");
         HelloResponse bisErrorMessage = new HelloResponse("I (the client side) receive this when error");
         HelloResponse bisTimeoutMessage = new HelloResponse("I (the client side) receive this when timeout");
         Consumer<HelloResponse> bisConsumer = response -> {
@@ -172,10 +173,11 @@ public class ClientService {
         };
         int bisTimeoutSeconds = 30;
         MessageChannel<HelloResponse> bisChannel = new MessageChannel<>(bisConsumer,
-                bisErrorMessage, Duration.ofSeconds(bisTimeoutSeconds), bisTimeoutMessage);
+                bisErrorMessage, bisCompleteMessage, Duration.ofSeconds(bisTimeoutSeconds), bisTimeoutMessage);
         Consumer<HelloRequest> biGreetings = advancedHelloService.bidiHello(biSocialInfo, bisChannel);
         MessageChannel<HelloRequest> bicChannel = (MessageChannel<HelloRequest>) biGreetings;
         for (int i = 0; i < biSocialInfo.getFriends().size(); i++) {
+            int index = i;
             HelloRequest request = new HelloRequest("hi, "+biSocialInfo.getFriends().get(i));
             schedule.schedule(()->{
                 if (bicChannel.isClosed()){
@@ -183,6 +185,9 @@ public class ClientService {
                     return;
                 }
                 bicChannel.accept(request);
+                if (index == biSocialInfo.getFriends().size() -1){
+                    bicChannel.done();
+                }
             }, i+1, TimeUnit.SECONDS);
         }
         IntStream.range(1, 60).forEach(i->schedule.schedule(()->{

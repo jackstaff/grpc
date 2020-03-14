@@ -10,7 +10,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -27,10 +26,12 @@ public class MessageChannel<T> implements Consumer<T> {
 
     private Consumer<T> consumer;
     private T errorMessage;
+    private T completeMessage;
     private Duration timeout;
     private T timeoutMessage;
     private Packet<Throwable> status;
     private StreamObserver<Packet<?>> observer;
+    private boolean unary;
 
     public MessageChannel(Consumer<T> consumer) {
         this.consumer = consumer;
@@ -42,25 +43,33 @@ public class MessageChannel<T> implements Consumer<T> {
         this.errorMessage = errorMessage;
     }
 
-    public MessageChannel(Consumer<T> consumer, @Nonnull Duration timeout, @Nonnull T timeoutMessage) {
-        this(consumer);
-        this.timeout = timeout;
-        this.timeoutMessage = timeoutMessage;
+    public MessageChannel(Consumer<T> consumer, @Nonnull T errorMessage, @Nonnull T completeMessage) {
+        this(consumer, errorMessage);
+        this.completeMessage = completeMessage;
+    }
+
+    public MessageChannel(Consumer<T> consumer, @Nonnull T errorMessage, @Nonnull Duration timeout, @Nonnull T timeoutMessage) {
+        this(consumer, errorMessage);
+        if (timeout.toDays() < 365){
+            this.timeout = timeout;
+            this.timeoutMessage = timeoutMessage;
+        }
     }
 
     /**
      * prepare the errorMessage and timeoutMessage for message channel,
-     * the consumer will receive this errorMessage if there is an error in the channel (like network error).
-     * and the consumer will receive this timeoutMessage if the "done()" is not called in time-out.
-     *
+     * 1. the consumer will receive this errorMessage if there is an error in the channel (like network error).
+     * 2. the consumer will receive this timeoutMessage if the "done()" is not called in time-out.
+     * 3. the consumer will receive this completeMessage if call "done()"
      * @param consumer the consumer
      * @param errorMessage the error Message
+     * @param completeMessage the complete message
      * @param timeout the timeout
      * @param timeoutMessage the timeout Message
      */
-    public MessageChannel(Consumer<T> consumer, @Nonnull T errorMessage, @Nonnull Duration timeout, @Nonnull T timeoutMessage) {
-        this(consumer, timeout, timeoutMessage);
-        this.errorMessage = errorMessage;
+    public MessageChannel(Consumer<T> consumer, @Nonnull T errorMessage, @Nonnull T completeMessage, @Nonnull Duration timeout, @Nonnull T timeoutMessage) {
+        this(consumer, errorMessage, timeout, timeoutMessage);
+        this.completeMessage = completeMessage;
     }
 
     MessageChannel(StreamObserver<Packet<?>> observer){
@@ -68,10 +77,10 @@ public class MessageChannel<T> implements Consumer<T> {
         setObserver(observer);
     }
 
-    MessageChannel(StreamObserver<Packet<?>> observer, int timeoutSeconds){
+    MessageChannel(StreamObserver<Packet<?>> observer, int timeoutMillSeconds){
         this(observer);
-        if (timeoutSeconds >0){
-            this.timeout = Duration.ofSeconds(timeoutSeconds);
+        if (timeoutMillSeconds >0){
+            this.timeout = Duration.ofMillis(timeoutMillSeconds);
         }
     }
 
@@ -125,16 +134,22 @@ public class MessageChannel<T> implements Consumer<T> {
         this.close(errorCode);
     }
 
-    int getTimeoutSeconds() {
-        return Optional.ofNullable(timeout).map(Duration::getSeconds).map(Long::intValue).orElse(0);
+    int getTimeoutMillSeconds() {
+        return Optional.ofNullable(timeout).map(Duration::toMillis).map(Long::intValue).orElse(0);
     }
 
     MessageChannel<T> ready() {
         if (this.timeout != null && !isClosed()){
             schedule.schedule(()-> {
                 if (!isClosed()){
-                    this.status.setCommand(Command.TIMEOUT);
-                    Optional.ofNullable(timeoutMessage).ifPresent(msg-> CompletableFuture.runAsync(()->consumer.accept(msg)));
+                    this.close(Command.TIMEOUT);
+                    if (observer != null){
+                        try {
+                            this.observer.onNext(new Packet<>(Command.TIMEOUT));
+                        }catch (Exception ignore) {
+                        }
+                        observer.onCompleted();
+                    }
                 }
             }, timeout.toMillis(), TimeUnit.MILLISECONDS);
         }
@@ -145,26 +160,35 @@ public class MessageChannel<T> implements Consumer<T> {
         if (!isClosed()) {
             status.setCommand(command);
             switch (command) {
+                case Command.COMPLETED:
+                    Optional.ofNullable(completeMessage).ifPresent(consumer);
+                    break;
                 case Command.EXCEPTION:
                 case Command.UNREACHABLE:
                     Optional.ofNullable(errorMessage).ifPresent(consumer);
                     break;
                 case Command.TIMEOUT:
+                    Optional.ofNullable(timeoutMessage).ifPresent(consumer);
+                    break;
                 default:
                     break;
             }
         }
     }
 
+    @SuppressWarnings("unchecked")
     void acceptMessage(Object t) {
         if (t !=null && !isClosed()) {
-            directAccept(t);
+            consumer.accept((T)t);
+            if (unary){
+                close(Command.COMPLETED);
+            }
         }
     }
 
-    @SuppressWarnings("unchecked")
-    void directAccept(Object t) {
-        consumer.accept((T)t);
+    MessageChannel<T> unary() {
+        this.unary = true;
+        return this;
     }
 
     MessageChannel<T> link(MessageChannel<?> another) {

@@ -1,7 +1,6 @@
 package org.jackstaff.grpc.internal;
 
 import com.google.protobuf.ByteString;
-import io.grpc.Internal;
 import io.grpc.stub.StreamObserver;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtostuffIOUtil;
@@ -17,7 +16,6 @@ import java.util.Optional;
 /**
  * @author reco@jackstaff.org
  */
-@Internal
 public class Transform {
 
     private static final IdStrategy idStrategy= new DefaultIdStrategy(
@@ -139,4 +137,12 @@ public class Transform {
         };
     }
 
+    public static void main(String[] args) {
+        Object[] a = new Object[]{1,null, "A"};
+        Packet<Object[]> p = new Packet<>(1, a);
+        byte[] bs = toBinary(p);
+        System.out.println(bs.length);
+        p = fromBinary(bs);
+        System.out.println(p.getPayload()[1]);
+    }
 }

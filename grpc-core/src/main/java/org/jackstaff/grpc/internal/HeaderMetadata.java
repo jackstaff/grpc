@@ -9,7 +9,6 @@ import java.util.Optional;
 /**
  * @author reco@jackstaff.org
  */
-@Internal
 public class HeaderMetadata<T> {
 
     public static final String AUTHORITY = "authority";

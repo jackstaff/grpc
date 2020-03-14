@@ -20,10 +20,6 @@ public class MyHelloService implements HelloService {
     Logger logger = LoggerFactory.getLogger(MyHelloService.class);
     ScheduledExecutorService schedule = Executors.newScheduledThreadPool(5);
 
-    public MyHelloService() {
-        logger.info("MyHelloService..........CREATE......."+System.identityHashCode(this));
-    }
-
     @Override
     public String sayHello(String greeting) {
         logger.info("MyHelloService.sayHello receive: {}", greeting);

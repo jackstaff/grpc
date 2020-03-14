@@ -1,12 +1,10 @@
 package org.jackstaff.grpc;
 
-import io.grpc.Internal;
 import io.grpc.stub.StreamObserver;
 
 /**
  * @author reco@jackstaff.org
  */
-@Internal
 class MessageObserver implements StreamObserver<Packet<?>> {
 
     private final MessageChannel<?> channel;
@@ -42,12 +40,16 @@ class MessageObserver implements StreamObserver<Packet<?>> {
 
     @Override
     public void onError(Throwable error) {
-        channel.setError(Command.UNREACHABLE, error);
+        if (!channel.isClosed()) {
+            channel.setError(Command.UNREACHABLE, error);
+        }
     }
 
     @Override
     public void onCompleted() {
-        channel.close(Command.COMPLETED);
+        if (!channel.isClosed()) {
+            channel.close(Command.COMPLETED);
+        }
     }
 
 }

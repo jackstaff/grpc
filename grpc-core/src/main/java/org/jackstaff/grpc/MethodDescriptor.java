@@ -1,6 +1,5 @@
 package org.jackstaff.grpc;
 
-import io.grpc.Internal;
 import org.jackstaff.grpc.annotation.AsynchronousUnary;
 import org.jackstaff.grpc.exception.ValidationException;
 
@@ -15,7 +14,6 @@ import java.util.stream.IntStream;
 /**
  * @author reco@jackstaff.org
  */
-@Internal
 class MethodDescriptor {
 
     private Object bean;
@@ -68,7 +66,7 @@ class MethodDescriptor {
                     return Mode.ServerStreaming;
                 }
                 if (Consumer.class.equals(method.getReturnType())) {
-                    return Mode.BiStreaming;
+                    return Mode.BidiStreaming;
                 }
         }
         throw new ValidationException(method + " invalid sign");

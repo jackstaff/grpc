@@ -4,14 +4,15 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.jackstaff.grpc</groupId>
     <artifactId>grpc-core</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <name>grpc-core</name>
     <description>Jackstaff Grpc Core: A java RPC framework , gRPC based and compatible with gRPC</description>
     <url>https://github.com/jackstaff/grpc</url>
     <packaging>jar</packaging>
 
     <properties>
-        <grpc.version>1.26.0</grpc.version>
+        <protostuff.version>1.6.2</protostuff.version>
+        <grpc.version>1.28.0</grpc.version>
         <java.version>1.8</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
@@ -56,12 +57,12 @@
         <dependency>
             <groupId>io.protostuff</groupId>
             <artifactId>protostuff-core</artifactId>
-            <version>1.6.2</version>
+            <version>${protostuff.version}</version>
         </dependency>
         <dependency>
             <groupId>io.protostuff</groupId>
             <artifactId>protostuff-runtime</artifactId>
-            <version>1.6.2</version>
+            <version>${protostuff.version}</version>
         </dependency>
 
     </dependencies>

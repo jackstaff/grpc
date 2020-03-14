@@ -1,6 +1,5 @@
 package org.jackstaff.grpc.internal;
 
-import io.grpc.Internal;
 import io.grpc.stub.StreamObserver;
 import org.jackstaff.grpc.Packet;
 
@@ -10,7 +9,6 @@ import java.util.function.Function;
 /**
  * @author reco@jackstaff.org
  */
-@Internal
 public class PacketServerGrpc extends InternalGrpc.InternalImplBase {
 
     private final BiConsumer<Packet<?>, StreamObserver<Packet<?>>> unary;

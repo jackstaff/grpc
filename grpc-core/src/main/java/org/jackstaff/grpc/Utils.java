@@ -1,7 +1,5 @@
 package org.jackstaff.grpc;
 
-import io.grpc.Internal;
-
 import javax.annotation.Nonnull;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -10,7 +8,6 @@ import java.util.List;
 /**
  * @author reco@jackstaff.org
  */
-@Internal
 class Utils {
 
     static @Nonnull Packet<?> before(Context context, List<Interceptor> interceptors) {

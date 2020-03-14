@@ -15,6 +15,8 @@ public class ServerConfig {
     private int maxConnectionIdle;
     private int maxConnectionAge;
     private int maxConnectionAgeGrace;
+    private String kyeCertChain;
+    private String privateKey;
 
     public int getPort() {
         return port;
@@ -95,4 +97,21 @@ public class ServerConfig {
     public void setMaxInboundMetadataSize(int maxInboundMetadataSize) {
         this.maxInboundMetadataSize = maxInboundMetadataSize;
     }
+
+    public String getKyeCertChain() {
+        return kyeCertChain;
+    }
+
+    public void setKyeCertChain(String kyeCertChain) {
+        this.kyeCertChain = kyeCertChain;
+    }
+
+    public String getPrivateKey() {
+        return privateKey;
+    }
+
+    public void setPrivateKey(String privateKey) {
+        this.privateKey = privateKey;
+    }
+
 }

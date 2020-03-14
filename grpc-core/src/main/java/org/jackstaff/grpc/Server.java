@@ -1,7 +1,9 @@
 package org.jackstaff.grpc;
 
 import io.grpc.*;
+import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
+import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
 import io.grpc.stub.StreamObserver;
 import org.jackstaff.grpc.configuration.ServerConfig;
 import org.jackstaff.grpc.exception.ValidationException;
@@ -9,6 +11,7 @@ import org.jackstaff.grpc.internal.HeaderMetadata;
 import org.jackstaff.grpc.internal.PacketServerGrpc;
 import org.jackstaff.grpc.internal.Transform;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -76,8 +79,12 @@ public class Server {
         if (cfg.getMaxConnectionAgeGrace() >0) {
             builder.maxConnectionAgeGrace(cfg.getMaxConnectionAgeGrace(), TimeUnit.SECONDS);
         }
-        this.server = builder.build();
         try {
+            if (cfg.getKyeCertChain() != null && cfg.getKyeCertChain().length()>0 && cfg.getPrivateKey() != null && cfg.getPrivateKey().length()>0) {
+                SslContextBuilder sslContextBuilder = GrpcSslContexts.forServer(new File(cfg.getKyeCertChain()), new File(cfg.getPrivateKey()));
+                builder.sslContext(sslContextBuilder.build());
+            }
+            this.server = builder.build();
             server.start();
         } catch (Exception e) {
             throw new ValidationException("Server Start fail ", e);
@@ -119,14 +126,17 @@ public class Server {
             Context context = buildContext(packet);
             MethodDescriptor info = context.getMethodDescriptor();
             if (info.getMode() == Mode.UnaryStreaming) {
-                MessageChannel<?> channel = new MessageChannel<>(observer, packet.getCommand()).ready();
+                MessageChannel<?> channel = new MessageChannel<>(observer, packet.getCommand()).unary().ready();
                 context.setChannel(channel);
+                Packet<?> result = Utils.walkThrough(context, info.getInterceptors());
+                if (result.isException()){
+                    observer.onNext(result);
+                    observer.onCompleted();
+                }
+                return;
             }
             Packet<?> result = Utils.walkThrough(context, info.getInterceptors());
             observer.onNext(result);
-            if (info.getMode() == Mode.UnaryStreaming && !result.isException()) {
-                return;
-            }
         }catch (Exception ex){
             observer.onNext(Packet.throwable(ex));
         }
