@@ -17,6 +17,8 @@ Step 0: Import grpc-spring-boot-starter in pom.xml
 ```
 Step 1: Define protocol interface:
 ```java
+import java.util.function.Consumer;
+
 public interface HelloService {
 
     String sayHello(String greeting); //Unary RPCs
