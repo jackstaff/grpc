@@ -3,12 +3,16 @@ package org.jackstaff.grpc;
 /**
  * @author reco@jackstaff.org
  */
-enum Mode {
+public enum MethodType {
+
     Unary,
-    UnaryAsynchronous,
-    UnaryStreaming,
     ClientStreaming,
     ServerStreaming,
     BidiStreaming,
+
+    AsynchronousUnary,
+    UnaryServerStreaming,
+    VoidClientStreaming;
+
 
 }

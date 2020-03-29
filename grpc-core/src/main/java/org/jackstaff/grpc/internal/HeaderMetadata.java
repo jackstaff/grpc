@@ -1,10 +1,14 @@
 package org.jackstaff.grpc.internal;
 
-import io.grpc.*;
+import io.grpc.Attributes;
+import io.grpc.Context;
+import io.grpc.Grpc;
+import io.grpc.Metadata;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.MetadataUtils;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author reco@jackstaff.org
@@ -14,7 +18,9 @@ public class HeaderMetadata<T> {
     public static final String AUTHORITY = "authority";
     public static final String REMOTE_ADDR = "remote-addr";
     public static final String LOCAL_ADDR = "local-addr";
-    private static final String JACKSTAFF ="jackstaff-grpc";
+    public static final String TIMEOUT = "grpc-timeout";
+
+    private static final String JACKSTAFF = "jackstaff-grpc";
 
     private final Metadata.Key<T> key;
     private Context.Key<Metadata> contextKey;

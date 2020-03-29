@@ -14,6 +14,7 @@ public class ClientConfig {
     private int maxInboundMessageSize;
     private int idleTimeout;
     private boolean plaintext=true;
+    private int defaultTimeout=-1;
 
     public String getHost() {
         return host;
@@ -86,4 +87,13 @@ public class ClientConfig {
     public void setPlaintext(boolean plaintext) {
         this.plaintext = plaintext;
     }
+
+    public int getDefaultTimeout() {
+        return defaultTimeout;
+    }
+
+    public void setDefaultTimeout(int defaultTimeout) {
+        this.defaultTimeout = defaultTimeout;
+    }
+
 }

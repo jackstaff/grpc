@@ -6,15 +6,18 @@ import org.jackstaff.grpc.configuration.ClientConfig;
 import org.jackstaff.grpc.exception.ValidationException;
 import org.jackstaff.grpc.internal.HeaderMetadata;
 import org.jackstaff.grpc.internal.PacketStub;
-import org.jackstaff.grpc.internal.Transform;
+import org.jackstaff.grpc.internal.Serializer;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
+import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * the client side delegate
@@ -73,7 +76,7 @@ public class Client {
             if (cfg.getMaxInboundMessageSize() >512*1024){
                 builder.maxInboundMessageSize(cfg.getMaxInboundMessageSize());
             }
-            stubs.put(authority, new PacketStub<>(authority, builder.build()));
+            stubs.put(authority, new PacketStub<>(authority, cfg.getDefaultTimeout(), builder.build()));
         });
     }
 
@@ -94,6 +97,9 @@ public class Client {
             }
             return null;
         }
+        List<MethodDescriptor> descriptors = Arrays.stream(type.getMethods()).
+                map(method -> new MethodDescriptor(type, method)).collect(Collectors.toList());
+        MethodDescriptor.validateProtocol(type, descriptors);
         Object bean = creator.newProxyInstance(type, (proxy, method, args) -> {
             if (method.getDeclaringClass().getName().equals("java.lang.Object")) {
                 try {
@@ -103,7 +109,7 @@ public class Client {
                 }
             }
             MethodDescriptor info = methods.computeIfAbsent(type+"/"+method, k-> new MethodDescriptor(type, method));
-            PacketStub<?> stub = new PacketStub<>(packetStub, info.getMode()==Mode.Unary);
+            PacketStub<?> stub = new PacketStub<>(packetStub, info.getMethodType()== MethodType.Unary);
             stub.attach(HeaderMetadata.ROOT, info.getSign());
             Context context =new Context(info, args, proxy).stub(stub);
             Packet<?> packet = Utils.before(context, interceptors);
@@ -122,31 +128,29 @@ public class Client {
     private @Nonnull Packet<?> stubCall(Context context, PacketStub<?> stub) {
         MethodDescriptor info = context.getMethodDescriptor();
         try {
-            switch (info.getMode()){
+            switch (info.getMethodType()){
                 case Unary:
-                    return stub.unary(Packet.boxing(context.getArguments()));
-                case UnaryAsynchronous:
-                    stub.asynchronousUnary(Packet.boxing(context.getArguments()));
-                    return new Packet<>();
-                case UnaryStreaming:
-                    MessageChannel<?> usChannel = info.getChannel(context.getArguments());
-                    MessageObserver usObserver = new MessageObserver(usChannel);
-                    stub.unaryStreaming(Packet.boxing(usChannel.getTimeoutMillSeconds(), context.getArguments()), usObserver);
+                    return stub.timeout(null).unary(Packet.boxing(context.getArguments()));
+                case AsynchronousUnary:
+                    stub.timeout(null).asynchronousUnary(Packet.boxing(context.getArguments()));
                     return new Packet<>();
                 case ServerStreaming:
                     MessageChannel<?> ssChannel = info.getChannel(context.getArguments());
                     MessageObserver ssObserver = new MessageObserver(ssChannel);
-                    stub.serverStreaming(Packet.boxing(ssChannel.getTimeoutMillSeconds(), context.getArguments()), ssObserver);
+                    stub.timeout(ssChannel.getTimeout());
+                    stub.serverStreaming(Packet.boxing((int)ssChannel.getTimeout().toMillis(), context.getArguments()), ssObserver);
                     return new Packet<>();
-                case ClientStreaming:
-                    stub.attach(HeaderMetadata.BINARY_ROOT, Transform.toBinary(Packet.boxing(context.getArguments())));
+                case VoidClientStreaming:
+                    stub.timeout(null).attach(HeaderMetadata.BINARY_ROOT, Serializer.toBinary(Packet.boxing(context.getArguments())));
                     MessageObserver csObserver = new MessageObserver(new MessageChannel<>(t->{}));
                     MessageChannel<?> csChannel = new MessageChannel<>(stub.clientStreaming(csObserver));
                     csObserver.link(csChannel);
                     return Packet.ok(csChannel);
+                case ClientStreaming:
                 case BidiStreaming:
                     MessageChannel<?> bsChannel = info.getChannel(context.getArguments());
-                    stub.attach(HeaderMetadata.BINARY_ROOT, Transform.toBinary(Packet.boxing(bsChannel.getTimeoutMillSeconds(), context.getArguments())));
+                    stub.timeout(bsChannel.getTimeout());
+                    stub.attach(HeaderMetadata.BINARY_ROOT, Serializer.toBinary(Packet.boxing((int)bsChannel.getTimeout().toMillis(), context.getArguments())));
                     MessageObserver bsObserver = new MessageObserver(bsChannel);
                     MessageChannel<?> channel = new MessageChannel<>(stub.bidiStreaming(bsObserver));
                     bsObserver.link(channel);

@@ -4,7 +4,6 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import org.jackstaff.grpc.exception.StatusException;
-import org.jackstaff.grpc.internal.Original;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -24,14 +23,15 @@ public class MessageChannel<T> implements Consumer<T> {
 
     private static final ScheduledExecutorService schedule = Executors.newSingleThreadScheduledExecutor();
 
+    private boolean v2;
+    private boolean unary;
     private Consumer<T> consumer;
     private T errorMessage;
     private T completeMessage;
     private Duration timeout;
     private T timeoutMessage;
     private Packet<Throwable> status;
-    private StreamObserver<Packet<?>> observer;
-    private boolean unary;
+    private StreamObserver observer;
 
     public MessageChannel(Consumer<T> consumer) {
         this.consumer = consumer;
@@ -74,7 +74,19 @@ public class MessageChannel<T> implements Consumer<T> {
 
     MessageChannel(StreamObserver<Packet<?>> observer){
         this(t->{});
-        setObserver(observer);
+        this.observer = observer;
+        Original.accept(observer, ServerCallStreamObserver.class, o->o.setOnCancelHandler(() -> setError(Command.UNREACHABLE, new StatusException("canceled"))));
+        this.consumer = info->onNext(Packet.message(info));
+    }
+
+    MessageChannel(StreamObserver<?> observer, Consumer<T> consumer, int timeoutMillSeconds){
+        this(t->{});
+        this.observer = observer;
+        Original.accept(observer, ServerCallStreamObserver.class, o->o.setOnCancelHandler(() -> setError(Command.UNREACHABLE, new StatusException("canceled"))));
+        this.consumer = consumer;
+        if (timeoutMillSeconds >0){
+            this.timeout = Duration.ofMillis(timeoutMillSeconds);
+        }
     }
 
     MessageChannel(StreamObserver<Packet<?>> observer, int timeoutMillSeconds){
@@ -107,7 +119,9 @@ public class MessageChannel<T> implements Consumer<T> {
     public void done() {
         if (!isClosed()){
             if (observer != null){
-                onNext(new Packet<>(Command.COMPLETED));
+                if (!v2) {
+                    onNext(new Packet<>(Command.COMPLETED));
+                }
                 observer.onCompleted();
             }
             close(Command.COMPLETED);
@@ -135,8 +149,17 @@ public class MessageChannel<T> implements Consumer<T> {
         this.close(errorCode);
     }
 
-    int getTimeoutMillSeconds() {
-        return Optional.ofNullable(timeout).map(Duration::toMillis).map(Long::intValue).orElse(0);
+    Duration getTimeout() {
+        return Optional.ofNullable(timeout).orElse(Duration.ZERO);
+    }
+
+    private boolean isV2(){
+        return this.v2;
+    }
+
+    MessageChannel<T> setV2(boolean v2) {
+        this.v2 = true;
+        return this;
     }
 
     MessageChannel<T> ready() {
@@ -197,12 +220,6 @@ public class MessageChannel<T> implements Consumer<T> {
         return this;
     }
 
-    void setObserver(StreamObserver<Packet<?>> observer) {
-        this.observer = observer;
-        Original.accept(observer, ServerCallStreamObserver.class, o->o.setOnCancelHandler(() -> setError(Command.UNREACHABLE, new StatusException("canceled"))));
-        this.consumer = info->onNext(Packet.message(info));
-    }
-
     private void onNext(Packet<?> packet){
         if (isClosed()) {
             return;
@@ -224,5 +241,6 @@ public class MessageChannel<T> implements Consumer<T> {
                 Optional.ofNullable(status.getPayload()).map(e->",error="+e).orElse("")+
                 '}';
     }
+
 
 }
