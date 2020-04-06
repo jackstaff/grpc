@@ -181,13 +181,12 @@ public class MyHelloService implements HelloService {
 ```java
 public interface HelloService {
 
-    //it's a flag annotation, indicate the unary method will call as asynchronous.
-    @AsynchronousUnary
-    void postMessage(String message);
-    
+
     //for server streaming, it indicate the channel will closed after call Consumer.accept() only one times
     @AsynchronousUnary
-    void onlyOneReply(String greeting, Consumer<String> reply);
+    default void sayHello(String greeting, Consumer<String> reply) {
+        //reply.accept(sayHello(greeting));
+    }
     
 }
 ```
