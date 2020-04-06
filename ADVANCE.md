@@ -181,11 +181,26 @@ public class MyHelloService implements HelloService {
 ```java
 public interface HelloService {
 
+    String sayHello(String greeting); //Unary RPCs
 
     //it indicate the channel will closed after call Consumer.accept() only one times
+    //it's alias method, default + overload unary method. NOT need implements.
     @AsynchronousUnary
     default void sayHello(String greeting, Consumer<String> reply) {
         //reply.accept(sayHello(greeting));
+    }
+    
+    void lotsOfReplies(String greeting, Consumer<String> replies);//Server streaming RPCs
+
+    //sync call server streaming,it's alias method,  default + overload ServerStreaming method. NOT need implements.
+    @UnaryServerStreaming
+    default List<String> lotsOfReplies(String greeting) {
+        /*
+        List<String> list = new ArrayList<>();
+        lotsOfReplies(greeting, list::add);
+        return list;
+        */
+        return null;
     }
     
 }
