@@ -2,7 +2,9 @@ package org.jackstaff.grpc;
 
 import org.jackstaff.grpc.annotation.*;
 import org.jackstaff.grpc.exception.ValidationException;
+import org.jackstaff.grpc.internal.InternalGrpc;
 
+import javax.annotation.Nonnull;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
@@ -12,24 +14,26 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * @author reco@jackstaff.org
  */
+@SuppressWarnings("rawtypes")
 public class MethodDescriptor {
 
-    private Object bean;
-    private Class<?> type;
-    private Method method;
-    private List<Interceptor> interceptors;
-    private MethodType methodType;
-    private int channelIndex;
-    private String sign;
-
     private final boolean v2;
-    private Class<?> requestType;
-    private Class<?> responseType;
+    private final Class<?> type;
+    private final Method method;
+    private final Object bean;
+    private final List<Interceptor> interceptors;
+    private final String sign;
+    private final MethodType methodType;
+    private final int channelIndex;
     private MethodDescriptor peer;
+    private Transform requestTransform;
+    private Transform responseTransform;
+    private io.grpc.MethodDescriptor grpcMethod;
 
     public MethodDescriptor(Class<?> type, Method method) {
         this(type, method, null, null);
@@ -37,41 +41,89 @@ public class MethodDescriptor {
 
     public MethodDescriptor(Class<?> type, Method method, Object bean, List<Interceptor> interceptors) {
         this.v2 = type.getAnnotation(Protocol.class) != null;
-        this.bean = bean;
         this.type = type;
         this.method = method;
+        this.bean = bean;
         this.interceptors = interceptors;
-        String name = type.getName()+"/" + method.toString();
-        this.sign = UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8))+"-"+Math.abs(name.hashCode());
         MethodType annotationType = getAnnotationMethodType(method);
         this.methodType = checkMethodType(annotationType);
         if (annotationType != null && annotationType != this.methodType){
             throw new ValidationException(method + " annotation invalid for "+ methodType);
         }
-        if (isV2()){
-            switch (this.methodType){
-                case Unary:
-                    requestType = method.getParameterTypes()[0];
-                    responseType = method.getReturnType();
-                    break;
-                case AsynchronousUnary:
-                case ServerStreaming:
-                    requestType = method.getParameterTypes()[0];
-                    responseType = genericParameter(method, 1);
-                    break;
-                case ClientStreaming:
-                    requestType = method.getParameterTypes()[0];
-                    responseType = genericReturnType(method);
-                    break;
-                case BidiStreaming:
-                    requestType = genericParameter(method, 0);
-                    responseType = genericReturnType(method);
-                    break;
-                case VoidClientStreaming:
-                default:
-                    break;
-            }
+        this.channelIndex = findChannelIndex();
+        this.grpcMethod = findGrpcMethod();
+        this.getTransform();
+        this.sign = buildSign();
+    }
+
+    private String buildSign(){
+        String name = type.getName()+"/" + method.toString();
+        return UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8))+"-"+Math.abs(name.hashCode());
+    }
+
+    private void getTransform(){
+        if (!v2){
+            this.requestTransform = Transforms.getTransform(Packet.class);
+            this.responseTransform = this.requestTransform;
+            return;
         }
+        switch (this.methodType){
+            case Unary:
+                this.requestTransform = Transforms.getTransform(method.getParameterTypes()[0]);
+                this.responseTransform = Transforms.getTransform(method.getReturnType());
+                break;
+            case UnaryServerStreaming:
+                //it's default + overload
+                this.requestTransform = Transforms.getTransform(method.getParameterTypes()[0]);
+                this.responseTransform = Transforms.getTransform(genericReturnType(method));
+                break;
+            case AsynchronousUnary:
+                //it's default,will call peer method (unary), transform same as server streaming.
+            case ServerStreaming:
+                this.requestTransform = Transforms.getTransform(method.getParameterTypes()[0]);
+                this.responseTransform = Transforms.getTransform(genericParameter(method, 1));
+                break;
+            case ClientStreaming:
+            case BidiStreaming:
+                this.requestTransform = Transforms.getTransform(genericReturnType(method));
+                this.responseTransform = Transforms.getTransform(genericParameter(method, 0));
+                break;
+            case VoidClientStreaming:
+                //NEVER HAPPEN
+                this.requestTransform = Transforms.getTransform(genericReturnType(method));
+                this.responseTransform = Transforms.getTransform(Void.TYPE);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private io.grpc.MethodDescriptor<?, ?> findGrpcMethod(){
+        if (v2){
+            String end = Optional.of(method.getName()).map(s->"/"+s.substring(0,1).toUpperCase()+s.substring(1)).get();
+            return Transforms.getServiceDescriptor(type).getMethods().stream().
+                    filter(desc->desc.getFullMethodName().endsWith(end)).findAny().orElse(null);
+        }
+        switch (this.methodType){
+            case AsynchronousUnary:
+            case Unary:
+                return InternalGrpc.getUnaryMethod();
+            case UnaryServerStreaming:
+            case ServerStreaming:
+                return InternalGrpc.getServerStreamingMethod();
+            case VoidClientStreaming:
+            case ClientStreaming:
+                return InternalGrpc.getClientStreamingMethod();
+            case BidiStreaming:
+                return InternalGrpc.getBidiStreamingMethod();
+            default:
+                return null;
+        }
+    }
+
+    private int findChannelIndex(){
+        Class<?>[] types =method.getParameterTypes();
+        return IntStream.range(0, types.length).filter(i->types[i].equals(Consumer.class)).findAny().orElse(-1);
     }
 
     private MethodType checkMethodType(MethodType annotationType) {
@@ -80,13 +132,15 @@ public class MethodDescriptor {
                 if (Consumer.class.equals(method.getReturnType())) {
                     return MethodType.VoidClientStreaming;
                 }
+                if (annotationType == MethodType.UnaryServerStreaming){
+                    return MethodType.UnaryServerStreaming;
+                }
                 return MethodType.Unary;
             case 1:
                 Class<?>[] types = method.getParameterTypes();
                 if (!types[types.length-1].equals(Consumer.class)){
                     throw new ValidationException(method+" Consumer must be LAST parameter");
                 }
-                channelIndex = types.length-1;//IntStream.range(0, types.length).filter(i->types[i].equals(Consumer.class)).sum();
                 if (method.getReturnType().equals(Void.TYPE)) {
                     if (annotationType ==MethodType.AsynchronousUnary){
                         return MethodType.AsynchronousUnary;
@@ -112,12 +166,19 @@ public class MethodDescriptor {
         return v2;
     }
 
-    public Class<?> getRequestType() {
-        return requestType;
+    @SuppressWarnings("unchecked")
+    public <ReqT, RespT> io.grpc.MethodDescriptor<ReqT, RespT> grpcMethod() {
+        return grpcMethod;
     }
 
-    public Class<?> getResponseType() {
-        return responseType;
+    @SuppressWarnings("unchecked")
+    public <Pojo, Proto> Transform<Pojo, Proto> requestTransform(){
+        return requestTransform;
+    }
+
+    @SuppressWarnings("unchecked")
+    public <Pojo, Proto> Transform<Pojo, Proto> responseTransform(){
+        return responseTransform;
     }
 
     public MethodType getMethodType() {
@@ -136,12 +197,15 @@ public class MethodDescriptor {
         return sign;
     }
 
-    public MessageChannel<?> getChannel(Object[] args){
-        return MessageChannel.build((Consumer<?>) args[channelIndex]).setV2(v2);
+    public @Nonnull MessageChannel<?> getChannel(Object[] args){
+        Consumer<?> consumer = channelIndex>=0 ? (Consumer<?>) args[channelIndex] : t->{};
+        return MessageChannel.build(consumer).setV2(v2);
     }
 
     public void setChannel(Object[] args, MessageChannel<?> channel){
-        args[channelIndex] = channel;
+        if (channelIndex >=0) {
+            args[channelIndex] = channel;
+        }
     }
 
     public Object getBean() {
@@ -151,9 +215,6 @@ public class MethodDescriptor {
     public List<Interceptor> getInterceptors() {
         return interceptors;
     }
-
-
-
 
     private static Map<Class<?>, Class<?>> PRIMITIVE = new ConcurrentHashMap<>();
     static {
@@ -165,7 +226,7 @@ public class MethodDescriptor {
         PRIMITIVE.put(Long.TYPE, Long.class);
         PRIMITIVE.put(Float.TYPE, Float.class);
         PRIMITIVE.put(Double.TYPE, Double.class);
-//        PRIMITIVE.put(Void.TYPE, Void.class);
+        PRIMITIVE.put(Void.TYPE, Void.class);
     }
 
     private static MethodDescriptor findPeer(List<MethodDescriptor> descriptors, MethodDescriptor desc, MethodType type){
@@ -236,14 +297,20 @@ public class MethodDescriptor {
                 }
                 throw new ValidationException(desc.getMethod()+"@UnaryServerStreaming peer method argument not match.");
             }
+            Set<MethodType> types = new HashSet<>(Arrays.asList(MethodType.Unary, MethodType.ClientStreaming,
+                    MethodType.ServerStreaming, MethodType.BidiStreaming, MethodType.VoidClientStreaming));
+            if (descriptors.stream().anyMatch(d->d != desc && types.contains(d.methodType) &&
+                    d.getMethod().getName().equals(desc.getMethod().getName()))){
+                throw new ValidationException(desc.getMethod()+" overload NOT supported.");
+            }
         }
     }
 
-    private static Class<?> genericReturnType(Method method){
+    public static Class<?> genericReturnType(Method method){
         return getGenericType(method.getGenericReturnType());
     }
 
-    private static Class<?> genericParameter(Method method, int index){
+    public static Class<?> genericParameter(Method method, int index){
         return getGenericType(method.getGenericParameterTypes()[index]);
     }
 
@@ -257,12 +324,13 @@ public class MethodDescriptor {
         return null;
     }
 
+    private static Set<Class<? extends Annotation>> ANNOTATIONS = new HashSet<>(Arrays.asList(
+            Unary.class, ClientStreaming.class, ServerStreaming.class, BidiStreaming.class,
+            AsynchronousUnary.class, UnaryServerStreaming.class, VoidClientStreaming.class));
+
     private static MethodType getAnnotationMethodType(Method method){
-        Set<Class<? extends Annotation>> all = new HashSet<>(Arrays.asList(
-                Unary.class, ClientStreaming.class, ServerStreaming.class, BidiStreaming.class,
-                        AsynchronousUnary.class, UnaryServerStreaming.class, VoidClientStreaming.class));
         List<Annotation> anns = Arrays.stream(method.getDeclaredAnnotations()).
-                filter(a->all.contains(a.annotationType())).collect(Collectors.toList());
+                filter(a->ANNOTATIONS.contains(a.annotationType())).collect(Collectors.toList());
         switch (anns.size()){
             case 0:
                 return null;

@@ -67,7 +67,9 @@ public class Server {
     public void start(ServerConfig cfg) {
         NettyServerBuilder builder = NettyServerBuilder.forPort(cfg.getPort());
         binders.values().stream().map(this::bindService).forEach(builder::addService);
-        builder.addService(bindService(new PacketServerGrpc(this::unary, this::serverStreaming, this::clientStreaming, this::bidiStreaming)));
+        if (!methods.isEmpty()) {
+            builder.addService(bindService(new PacketServerGrpc(this::unary, this::serverStreaming, this::clientStreaming, this::bidiStreaming)));
+        }
         if (cfg.getMaxInboundMessageSize() >512*1024){
             builder.maxInboundMessageSize(cfg.getMaxInboundMessageSize());
         }
@@ -124,30 +126,30 @@ public class Server {
     }
 
     private Context buildContext(Packet<?> packet){
-        String sign = HeaderMetadata.ROOT.getValue();
+        String sign =HeaderMetadata.ROOT.getValue();
         if (sign == null || sign.isEmpty()){
-            throw new ValidationException("method sign Not found");
+            throw new ValidationException("method sign Not found:"+sign);
         }
-        MethodDescriptor info = methods.get(sign);
-        if (info ==null){
+        MethodDescriptor descriptor = methods.get(sign);
+        if (descriptor ==null){
             throw new ValidationException("method Not found");
         }
-        return new Context(info, packet.unboxing(), info.getBean());
+        return new Context(descriptor, packet.unboxing(), descriptor.getBean());
     }
 
-    void unary(Packet<?> packet, StreamObserver<Packet<?>> observer) {
+    private void unary(Packet<?> packet, StreamObserver<Packet<?>> observer) {
         try {
             Context context = buildContext(packet);
-            MethodDescriptor info = context.getMethodDescriptor();
-            Packet<?> result = Utils.walkThrough(context, info.getInterceptors());
+            MethodDescriptor descriptor = context.getMethodDescriptor();
+            Packet<?> result = Utils.walkThrough(context, descriptor.getInterceptors());
             observer.onNext(result);
-        }catch (Exception ex){
+        }catch (Exception ex) {
             observer.onNext(Packet.throwable(ex));
         }
         observer.onCompleted();
     }
 
-    void serverStreaming(Packet<?> packet, StreamObserver<Packet<?>> observer) {
+    private void serverStreaming(Packet<?> packet, StreamObserver<Packet<?>> observer) {
         try {
             Context context = buildContext(packet);
             MessageChannel<?> channel = new MessageChannel<>(observer, packet.getCommand()).ready();
@@ -162,15 +164,16 @@ public class Server {
         }
     }
 
-    StreamObserver<Packet<?>> clientStreaming(StreamObserver<Packet<?>> observer) {
+    private StreamObserver<Packet<?>> clientStreaming(StreamObserver<Packet<?>> observer) {
         try {
             Packet<?> packet = Serializer.fromBinary(HeaderMetadata.BINARY_ROOT.getValue());
             Context context = buildContext(packet);
+            MessageChannel<?> respChannel = new MessageChannel<>(observer, packet.getCommand()).unary().ready();
+            context.setChannel(respChannel);
             Packet<?> result = Utils.walkThrough(context, context.getMethodDescriptor().getInterceptors());
             if (!result.isException()) {
-                MessageChannel<?> channel = new MessageChannel<>(observer);
-                MessageChannel<?> csChannel = MessageChannel.build((Consumer<?>)result.getPayload()).ready();
-                return new MessageObserver(csChannel.link(channel));
+                MessageChannel<?> reqChannel = MessageChannel.build((Consumer<?>)result.getPayload()).ready();
+                return new MessageObserver(reqChannel.link(respChannel));
             }
             throw (Exception) result.getPayload();
         }catch (Exception ex){
@@ -180,19 +183,17 @@ public class Server {
         }
     }
 
-    StreamObserver<Packet<?>> bidiStreaming(StreamObserver<Packet<?>> observer) {
+    private StreamObserver<Packet<?>> bidiStreaming(StreamObserver<Packet<?>> observer) {
         try {
             Packet<?> packet =Serializer.fromBinary(HeaderMetadata.BINARY_ROOT.getValue());
             Context context = buildContext(packet);
-            MessageChannel<?> ssChannel = new MessageChannel<>(observer).ready();
-            if (context.getMethodDescriptor().getMethodType() == MethodType.ClientStreaming){
-                ssChannel.unary();
-            }
-            context.setChannel(ssChannel);
+            MessageChannel<?> respChannel = new MessageChannel<>(observer).ready();
+            context.setChannel(respChannel);
             Packet<?> result = Utils.walkThrough(context, context.getMethodDescriptor().getInterceptors());
             if (!result.isException()) {
-                MessageChannel<?> csChannel = MessageChannel.build((Consumer<?>)result.getPayload()).ready();
-                return new MessageObserver(csChannel).link(ssChannel);
+                MessageChannel<?> reqChannel = MessageChannel.build((Consumer<?>)result.getPayload()).ready();
+                reqChannel.link(respChannel);
+                return new MessageObserver(reqChannel);
             }
             throw (Exception) result.getPayload();
         }catch (Exception ex){

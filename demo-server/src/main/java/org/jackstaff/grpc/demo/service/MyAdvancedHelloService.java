@@ -8,6 +8,7 @@ import org.jackstaff.grpc.demo.HelloResponse;
 import org.jackstaff.grpc.demo.SocialInfo;
 import org.jackstaff.grpc.demo.common.interceptor.Authorization;
 import org.jackstaff.grpc.demo.common.interceptor.LoggerInfo;
+import org.jackstaff.grpc.exception.StatusException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,18 +27,9 @@ public class MyAdvancedHelloService implements AdvancedHelloService {
     ScheduledExecutorService schedule = Executors.newScheduledThreadPool(5);
 
     @Override
-    public void postMessage(String message) {
+    public int postMessage(String message) {
         logger.info("MyAdvancedHelloService.postMessage receive: {}", message);
-        logger.info("for test @Asynchronous, i will sleep {} seconds(=message.length()). and i'm not block client side....start...", message.length());
-        LockSupport.parkNanos(TimeUnit.SECONDS.toSeconds(message.length()));
-        logger.info("...end...MyAdvancedHelloService.postMessage wake up..");
-    }
-
-    @Override
-    public void postMessage(String message, Consumer<String> result) {
-        logger.info("MyAdvancedHelloService.postMessage receive: {}, will Consumer.accept() after {} seconds", message, message.length());
-        result.accept("AdvancedHelloService echo:"+message);
-        logger.info("AdvancedHelloService.postMessage....channel.isClosed()="+((MessageChannel<?>) result).isClosed());
+        return 1;
     }
 
     @Override

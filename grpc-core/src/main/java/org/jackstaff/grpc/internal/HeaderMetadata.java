@@ -101,4 +101,25 @@ public class HeaderMetadata<T> {
         return context.withValue(contextKey, metadata);
     }
 
+    public static long getTimeoutMillSeconds(){
+        String t = stringValue(TIMEOUT);
+        if (t == null || t.length() <2){
+            return 0;
+        }
+        char unit = t.charAt(t.length()-1);
+        long count = Long.parseLong(t.substring(0, t.length()-1));
+        switch (unit){
+            case 'u':
+                return count/1000;
+            case 'm':
+                return count;
+            case 'S':
+                return count *1000;
+            case 'M':
+                return count * 60*1000;
+            default:
+                return 0;
+        }
+    }
+
 }

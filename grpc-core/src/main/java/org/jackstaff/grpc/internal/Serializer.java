@@ -1,14 +1,11 @@
 package org.jackstaff.grpc.internal;
 
-import com.google.protobuf.ByteString;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtostuffIOUtil;
 import io.protostuff.runtime.DefaultIdStrategy;
 import io.protostuff.runtime.IdStrategy;
 import io.protostuff.runtime.RuntimeSchema;
 import org.jackstaff.grpc.Packet;
-import org.jackstaff.grpc.Transform;
-import org.jackstaff.grpc.Transforms;
 import org.jackstaff.grpc.exception.SerializationException;
 
 /**
@@ -43,37 +40,6 @@ public class Serializer {
         }catch (Exception ex){
             throw new SerializationException("Packet fromBinary fail", ex);
         }
-    }
-
-
-    private static Packet<?> from(InternalProto.Packet proto) {
-        try {
-            return fromBinary(proto.getData().toByteArray());
-        }catch (SerializationException ex){
-            throw ex;
-        }
-        catch (Exception ex){
-            throw new SerializationException("from Protobuf fail", ex);
-        }
-    }
-
-    private static InternalProto.Packet build(Packet<?> packet) {
-        try {
-            return InternalProto.Packet.newBuilder().setData(ByteString.copyFrom(toBinary(packet))).build();
-        }catch (SerializationException ex){
-            throw ex;
-        }
-        catch (Exception ex){
-            throw new SerializationException("build Protobuf fail", ex);
-        }
-    }
-
-    static Transform<Packet<?>, InternalProto.Packet> getTransform(){
-        return Transforms.getTransform(Packet.class);
-    }
-
-    static {
-        Transforms.addTransform(Packet.class, InternalProto.Packet.class, Serializer::from, Serializer::build);
     }
 
 }

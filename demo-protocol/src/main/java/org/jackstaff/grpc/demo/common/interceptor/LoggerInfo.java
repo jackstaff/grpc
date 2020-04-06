@@ -35,9 +35,9 @@ public class LoggerInfo implements Interceptor {
     @Override
     public void throwing(Context context, @Nonnull Exception ex) {
         Optional.ofNullable(LoggerFactory.getLogger(context.getType())).filter(Logger::isInfoEnabled).ifPresent(logger -> {
-            logger.info("{}.{}, useTime:{}ns, throw exception message: {}",
+            logger.info("{}.{}, useTime:{}ns, throw exception : {}",
                     context.getType().getName(), context.getMethod().getName(),
-                    System.nanoTime()-(Long) context.getAttribute(this), ex.getMessage());
+                    System.nanoTime()-(Long) context.getAttribute(this), ex);
         });
     }
 

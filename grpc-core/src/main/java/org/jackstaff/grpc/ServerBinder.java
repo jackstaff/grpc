@@ -8,6 +8,7 @@ import io.grpc.stub.StreamObserver;
 import org.jackstaff.grpc.internal.HeaderMetadata;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static io.grpc.stub.ServerCalls.*;
@@ -28,7 +29,8 @@ class ServerBinder<T> implements BindableService {
         this.serviceDescriptor = Transforms.getServiceDescriptor(type);
         List<MethodDescriptor> methods = Arrays.stream(type.getMethods()).map(method -> new MethodDescriptor(type, method, target, interceptors)).collect(Collectors.toList());
         MethodDescriptor.validateProtocol(type, methods);
-        this.descriptors = methods.stream().filter(desc->desc.getMethodType() != MethodType.AsynchronousUnary).
+        Set<MethodType> types = new HashSet<>(Arrays.asList(MethodType.Unary, MethodType.ClientStreaming, MethodType.ServerStreaming, MethodType.BidiStreaming));
+        this.descriptors = methods.stream().filter(desc->types.contains(desc.getMethodType())).
                 collect(HashMap::new, (m,d)->m.put(d.getMethod().getName(), d), HashMap::putAll);
     }
 
@@ -73,8 +75,8 @@ class ServerBinder<T> implements BindableService {
 
         public MethodHandler(MethodDescriptor descriptor) {
             this.descriptor = descriptor;
-            this.reqTransform = Transforms.getTransform(descriptor.getRequestType());
-            this.respTransform = Transforms.getTransform(descriptor.getResponseType());
+            this.reqTransform = descriptor.requestTransform();
+            this.respTransform = descriptor.responseTransform();
         }
 
         @SuppressWarnings("unchecked")
@@ -98,7 +100,7 @@ class ServerBinder<T> implements BindableService {
                 case ServerStreaming:
                     try {
                         StreamObserver<Object> pojoObserver= respTransform.fromObserver(observer);
-                        MessageChannel<?> channel = new MessageChannel<>(observer, pojoObserver::onNext,-1).ready();
+                        MessageChannel<?> channel = new MessageChannel<>(observer, pojoObserver::onNext, HeaderMetadata.getTimeoutMillSeconds()).setV2(true).ready();
                         Object[] args = new Object[]{reqTransform.from(request), channel};
                         Context context = new Context(descriptor, args, descriptor.getBean());
                         Packet<?> result = Utils.walkThrough(context, descriptor.getInterceptors());
@@ -113,12 +115,29 @@ class ServerBinder<T> implements BindableService {
         }
 
         @SuppressWarnings("unchecked")
-        public StreamObserver<Req> invoke(StreamObserver<Resp> responseObserver) {
+        public StreamObserver<Req> invoke(StreamObserver<Resp> observer) {
             switch (descriptor.getMethodType()){
                 case ClientStreaming:
-                    return null;
                 case BidiStreaming:
-                    return null;
+                    try {
+                        StreamObserver<Object> pojoObserver= respTransform.fromObserver(observer);
+                        MessageChannel<?> respChannel = new MessageChannel<>(observer, pojoObserver::onNext, HeaderMetadata.getTimeoutMillSeconds()).setV2(true).ready();
+                        if (descriptor.getMethodType() == MethodType.ClientStreaming){
+                            respChannel.unary();
+                        }
+                        Context context = new Context(descriptor, new Object[]{respChannel}, descriptor.getBean());
+                        Packet<?> result = Utils.walkThrough(context, descriptor.getInterceptors());
+                        if (result.isException()) {
+                            observer.onError(throwable((Exception) result.getPayload()));
+                            return null;
+                        }
+                        MessageChannel<Object> reqChannel = MessageChannel.build((Consumer<Object>)result.getPayload()).setV2(true);
+                        reqChannel.link(respChannel);
+                        return reqTransform.buildObserver(new ChannelObserver<>(reqChannel));
+                    }catch (Exception ex){
+                        observer.onError(throwable(ex));
+                        return null;
+                    }
                 default:
                     throw new AssertionError("invalid method type "+descriptor.getMethod());
             }
@@ -129,9 +148,5 @@ class ServerBinder<T> implements BindableService {
         return Status.INTERNAL.withCause(ex).withDescription(ex.getMessage()).asRuntimeException();
     }
 
-    private int getTimeoutMillSeconds(){
-        String t = HeaderMetadata.stringValue(HeaderMetadata.TIMEOUT);
-        return 0;
-    }
 
 }

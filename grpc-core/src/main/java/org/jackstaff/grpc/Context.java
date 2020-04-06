@@ -1,7 +1,7 @@
 package org.jackstaff.grpc;
 
 import org.jackstaff.grpc.internal.HeaderMetadata;
-import org.jackstaff.grpc.internal.PacketStub;
+import org.jackstaff.grpc.internal.Stub;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.Method;
@@ -20,7 +20,7 @@ public class Context {
     private final Object target;
     private final Map<Object, Object> attributes;
     private final MethodDescriptor methodDescriptor;
-    private PacketStub<?> stub;
+    private Stub<?,?,?> stub;
 
     Context(MethodDescriptor methodDescriptor, Object[] arguments, Object target){
         this.attributes = new ConcurrentHashMap<>();
@@ -29,7 +29,7 @@ public class Context {
         this.target = target;
     }
 
-    Context stub(PacketStub<?> stub){
+    Context stub(Stub<?,?,?> stub){
         this.stub = stub;
         return this;
     }

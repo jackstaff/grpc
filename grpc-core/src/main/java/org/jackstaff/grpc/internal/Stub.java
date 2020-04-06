@@ -2,86 +2,111 @@ package org.jackstaff.grpc.internal;
 
 import io.grpc.CallOptions;
 import io.grpc.ManagedChannel;
-import io.grpc.Metadata;
 import io.grpc.stub.AbstractStub;
+import io.grpc.stub.StreamObserver;
 import org.jackstaff.grpc.MethodDescriptor;
-import org.jackstaff.grpc.MethodType;
+import org.jackstaff.grpc.Transform;
 
-import javax.annotation.Nullable;
 import java.time.Duration;
+import java.util.Iterator;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+
+import static io.grpc.stub.ClientCalls.*;
 
 /**
  * @author reco@jackstaff.org
  */
-public class Stub<S extends AbstractStub<S>> {
+public class Stub<S extends AbstractStub<S>, ReqT, RespT> {
 
-    private BlockingStub blockingStub;
-    private AsyncStub asyncStub;
+    private final String authority;
+    private final ManagedChannel channel;
+    private final Duration defaultTimeout;
+
     private S stub;
-    private Duration defaultTimeout;
-//    private Transform<Pojo, Proto> transform;
+    private MethodDescriptor descriptor;
+    private Transform<ReqT, ?> reqTransform;
+    private Transform<RespT, ?> respTransform;
 
-    public Stub(String authority, ManagedChannel channel) {
-        CallOptions options = CallOptions.DEFAULT.withAuthority(authority);
-        this.blockingStub = new BlockingStub(channel, options);
-        this.asyncStub = new AsyncStub(channel, options);
+    public Stub(String authority, ManagedChannel channel, Duration defaultTimeout) {
+        this.authority = authority;
+        this.channel = channel;
+        this.defaultTimeout = defaultTimeout;
     }
 
     @SuppressWarnings("unchecked")
-    public Stub(Stub<S> another, MethodDescriptor descriptor) {
-        this.stub =(S)(descriptor.getMethodType() == MethodType.Unary ? another.blockingStub : another.asyncStub);
+    public Stub(Stub<S, ReqT, RespT> prototype, MethodDescriptor descriptor) {
+        this(prototype.authority, prototype.channel, prototype.defaultTimeout);
+        this.descriptor = descriptor;
+        this.reqTransform = descriptor.requestTransform();
+        this.respTransform = descriptor.responseTransform();
+        CallOptions options = CallOptions.DEFAULT.withAuthority(authority);
+        switch (descriptor.getMethodType()) {
+            case Unary:
+            case UnaryServerStreaming:
+                this.stub =(S)new BlockingStub(channel, options);
+                break;
+            default:
+                this.stub =(S)new AsyncStub(channel, options);
+                break;
+        }
     }
 
-    public AbstractStub<?> getStub() {
-        return stub;
+    public String getAuthority() {
+        return authority;
     }
 
-    public void attachDeadline(@Nullable Duration duration) {
-        Optional.of(Optional.ofNullable(duration).orElse(defaultTimeout)).filter(d->d.getSeconds()>0).
-                ifPresent(t -> stub = stub.withDeadlineAfter(t.toMillis()+5000, TimeUnit.MILLISECONDS));
+    public ManagedChannel getChannel() {
+        return channel;
+    }
+
+    public Duration getDefaultTimeout() {
+        return defaultTimeout;
+    }
+
+    public void attachDefaultDeadline() {
+        attachDeadline(defaultTimeout);
+    }
+
+    public void attachDeadline(Duration duration) {
+        Optional.of(Optional.ofNullable(duration).filter(d->d.getSeconds()>=1).orElse(defaultTimeout)).filter(d->d.getSeconds()>=1).
+                ifPresent(t -> stub = stub.withDeadlineAfter(t.toMillis()+2000, TimeUnit.MILLISECONDS));
     }
 
     public <T> void attach(HeaderMetadata<T> metadata, T value) {
-        stub = metadata.attach(stub, value);
+        this.stub = metadata.attach(this.stub, value);
     }
 
     public void attach(String name, String value) {
-        stub = HeaderMetadata.attachString(stub, name, value);
+        this.stub = HeaderMetadata.attachString(this.stub, name, value);
     }
 
     public void attach(String name, byte[] value) {
-        stub = HeaderMetadata.attachBinary(stub, name, value);
+        this.stub = HeaderMetadata.attachBinary(this.stub, name, value);
     }
 
-//
-//    public Pojo unary(Pojo packet) {
-//        throw new UnsupportedOperationException("");
-//    }
-//
-//    public Iterator<Pojo> syncServerStreaming(Pojo packet) {
-//        throw new UnsupportedOperationException("");
-//    }
-//
-//    public void asynchronousUnary(Pojo packet) {
-//        throw new UnsupportedOperationException("");
-//    }
-//
-//    public void unaryStreaming(Pojo packet, StreamObserver<Pojo> observer) {
-//        throw new UnsupportedOperationException("");
-//    }
-//
-//    public void serverStreaming(Pojo packet, StreamObserver<Pojo> observer) {
-//        throw new UnsupportedOperationException("");
-//    }
-//
-//    public StreamObserver<Pojo> clientStreaming(StreamObserver<Pojo> observer) {
-//        throw new UnsupportedOperationException("");
-//    }
-//
-//    public StreamObserver<Pojo> bidiStreaming(StreamObserver<Pojo> observer) {
-//        throw new UnsupportedOperationException("");
-//    }
+    public RespT blockingUnary(ReqT request){
+        return respTransform.from(blockingUnaryCall(stub.getChannel(), descriptor.grpcMethod(), stub.getCallOptions(), reqTransform.build(request)));
+    }
+
+    public Iterator<RespT> blockingServerStreaming(ReqT request){
+        return respTransform.fromIterator(blockingServerStreamingCall(stub.getChannel(), descriptor.grpcMethod(), stub.getCallOptions(), reqTransform.build(request)));
+    }
+
+    public void asyncUnary(ReqT request, StreamObserver<RespT> observer) {
+        asyncUnaryCall(stub.getChannel().newCall(descriptor.grpcMethod(), stub.getCallOptions()), reqTransform.build(request), respTransform.buildObserver(observer));
+    }
+
+    public void asyncServerStreaming(ReqT request, StreamObserver<RespT> observer) {
+        asyncServerStreamingCall(stub.getChannel().newCall(descriptor.grpcMethod(), stub.getCallOptions()), reqTransform.build(request), respTransform.buildObserver(observer));
+    }
+
+    public StreamObserver<ReqT> asyncClientStreaming(StreamObserver<RespT> observer) {
+        return reqTransform.fromObserver(asyncClientStreamingCall(stub.getChannel().newCall(descriptor.grpcMethod(), stub.getCallOptions()), respTransform.buildObserver(observer)));
+    }
+
+    public StreamObserver<ReqT> asyncBidiStreaming(StreamObserver<RespT> observer) {
+        return reqTransform.fromObserver(asyncBidiStreamingCall(stub.getChannel().newCall(descriptor.grpcMethod(), stub.getCallOptions()), respTransform.buildObserver(observer)));
+    }
 
 }

@@ -11,7 +11,7 @@ public class BlockingStub extends AbstractBlockingStub<BlockingStub> {
     }
 
     @Override
-    public BlockingStub build(Channel channel, CallOptions callOptions) {
+    protected BlockingStub build(Channel channel, CallOptions callOptions) {
         return new BlockingStub(channel, callOptions);
     }
 

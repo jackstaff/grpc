@@ -4,6 +4,7 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import org.jackstaff.grpc.exception.StatusException;
+import org.jackstaff.grpc.exception.ValidationException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -34,7 +35,7 @@ public class MessageChannel<T> implements Consumer<T> {
     private StreamObserver observer;
 
     public MessageChannel(Consumer<T> consumer) {
-        this.consumer = consumer;
+        this.consumer = Optional.ofNullable(consumer).orElse(t->{});
         this.status = new Packet<>();
     }
 
@@ -50,10 +51,11 @@ public class MessageChannel<T> implements Consumer<T> {
 
     public MessageChannel(Consumer<T> consumer, @Nonnull T errorMessage, @Nonnull Duration timeout, @Nonnull T timeoutMessage) {
         this(consumer, errorMessage);
-        if (timeout.toDays() < 365){
-            this.timeout = timeout;
-            this.timeoutMessage = timeoutMessage;
+        if (timeout.toDays() > 365 || timeout.getSeconds() <1){
+            throw new ValidationException("timeout out range "+timeout);
         }
+        this.timeout = timeout;
+        this.timeoutMessage = timeoutMessage;
     }
 
     /**
@@ -75,29 +77,29 @@ public class MessageChannel<T> implements Consumer<T> {
     MessageChannel(StreamObserver<Packet<?>> observer){
         this(t->{});
         this.observer = observer;
-        Original.accept(observer, ServerCallStreamObserver.class, o->o.setOnCancelHandler(() -> setError(Command.UNREACHABLE, new StatusException("canceled"))));
+        Original.accept(observer, ServerCallStreamObserver.class, o->o.setOnCancelHandler(() -> setError(Command.UNREACHABLE, new StatusException(Command.UNREACHABLE))));
         this.consumer = info->onNext(Packet.message(info));
     }
 
-    MessageChannel(StreamObserver<?> observer, Consumer<T> consumer, int timeoutMillSeconds){
+    MessageChannel(StreamObserver<?> observer, Consumer<T> consumer, long timeoutMillSeconds){
         this(t->{});
         this.observer = observer;
-        Original.accept(observer, ServerCallStreamObserver.class, o->o.setOnCancelHandler(() -> setError(Command.UNREACHABLE, new StatusException("canceled"))));
+        Original.accept(observer, ServerCallStreamObserver.class, o->o.setOnCancelHandler(() -> setError(Command.UNREACHABLE, new StatusException(Command.UNREACHABLE))));
         this.consumer = consumer;
-        if (timeoutMillSeconds >0){
-            this.timeout = Duration.ofMillis(timeoutMillSeconds);
+        if (timeoutMillSeconds >=1000){
+            this.timeout = Duration.ofMillis(timeoutMillSeconds-100);
         }
     }
 
     MessageChannel(StreamObserver<Packet<?>> observer, int timeoutMillSeconds){
         this(observer);
-        if (timeoutMillSeconds >0){
+        if (timeoutMillSeconds >=1000){
             this.timeout = Duration.ofMillis(timeoutMillSeconds);
         }
     }
 
-    static MessageChannel<?> build(Consumer<?> consumer) {
-        return consumer instanceof MessageChannel ? (MessageChannel<?>) consumer : new MessageChannel<>(consumer);
+    static <T> MessageChannel<T> build(Consumer<T> consumer) {
+        return consumer instanceof MessageChannel ? (MessageChannel<T>) consumer : new MessageChannel<>(consumer);
     }
 
     /**
@@ -107,7 +109,7 @@ public class MessageChannel<T> implements Consumer<T> {
     @Override
     public void accept(@Nonnull T message) {
         if (isClosed()) {
-            throw new StatusException(""+status.getCommand());
+            throw new StatusException(status.getCommand());
         }
         acceptMessage(message);
     }
@@ -169,7 +171,9 @@ public class MessageChannel<T> implements Consumer<T> {
                     this.close(Command.TIMEOUT);
                     if (observer != null){
                         try {
-                            this.observer.onNext(new Packet<>(Command.TIMEOUT));
+                            if (v2) {
+                                this.observer.onNext(new Packet<>(Command.TIMEOUT));
+                            }
                         }catch (Exception ignore) {
                         }
                         observer.onCompleted();
@@ -205,13 +209,14 @@ public class MessageChannel<T> implements Consumer<T> {
         if (t !=null && !isClosed()) {
             consumer.accept((T)t);
             if (unary){
-                close(Command.COMPLETED);
+                done();
             }
         }
     }
 
     MessageChannel<T> unary() {
         this.unary = true;
+        this.completeMessage = null; //for unary, not complete message
         return this;
     }
 
@@ -227,7 +232,7 @@ public class MessageChannel<T> implements Consumer<T> {
         try {
             this.observer.onNext(packet);
         }catch (StatusRuntimeException ex){
-            StatusException se = new StatusException("canceled", ex);
+            StatusException se = new StatusException(ex);
             this.setError(Command.UNREACHABLE, se);
             throw se;
         }

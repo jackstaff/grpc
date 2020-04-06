@@ -11,7 +11,7 @@ public class ServerConfig {
     private int permitKeepAliveTime;
     private boolean permitKeepAliveWithoutCalls=true;
     private int maxInboundMessageSize;
-    private int maxInboundMetadataSize=20*1024;
+    private int maxInboundMetadataSize=80*1024;
     private int maxConnectionIdle;
     private int maxConnectionAge;
     private int maxConnectionAgeGrace;

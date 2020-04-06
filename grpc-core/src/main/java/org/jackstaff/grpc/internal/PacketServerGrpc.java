@@ -3,6 +3,7 @@ package org.jackstaff.grpc.internal;
 import io.grpc.stub.StreamObserver;
 import org.jackstaff.grpc.Packet;
 import org.jackstaff.grpc.Transform;
+import org.jackstaff.grpc.Transforms;
 
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -26,7 +27,7 @@ public class PacketServerGrpc extends InternalGrpc.InternalImplBase {
         this.serverStreaming = serverStreaming;
         this.clientStreaming = clientStreaming;
         this.bidiStreaming = bidiStreaming;
-        this.transform = Serializer.getTransform();
+        this.transform = Transforms.getTransform(Packet.class);
     }
 
     @Override

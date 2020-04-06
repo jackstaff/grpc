@@ -1,5 +1,10 @@
 package org.jackstaff.grpc;
 
+import com.google.protobuf.ByteString;
+import org.jackstaff.grpc.exception.SerializationException;
+import org.jackstaff.grpc.internal.InternalProto;
+import org.jackstaff.grpc.internal.Serializer;
+
 import java.util.Arrays;
 import java.util.function.Consumer;
 
@@ -41,6 +46,14 @@ public class Packet<T> implements Command {
         this.payload = payload;
     }
 
+    @Override
+    public String toString() {
+        return "Packet{" +
+                "command=" + command +
+                ", payload=" + payload +
+                '}';
+    }
+
     boolean isOk(){
         return command == OK;
     }
@@ -65,6 +78,10 @@ public class Packet<T> implements Command {
         return Arrays.stream((Object[])payload).map(a->a ==null || a.getClass().equals(Object.class) ? null : a).toArray();
     }
 
+    Object[] unboxing(int length){
+        return Arrays.copyOf(unboxing(), length);
+    }
+
     static Packet<Object[]> boxing(Object[] args){
         return boxing(0, args);
     }
@@ -74,15 +91,45 @@ public class Packet<T> implements Command {
     }
 
     String commandName(){
+        return commandName(command);
+    }
+
+    public static String commandName(int command){
         switch (command) {
             case COMPLETED: return "COMPLETED";
             case EXCEPTION: return "EXCEPTION";
             case TIMEOUT: return "TIMEOUT";
             case UNREACHABLE: return "UNREACHABLE";
-            case OK:
+            case OK: return "OK";
             default:
-                return "OK";
+                return "UNKNOWN";
         }
+    }
+
+    private static Packet<?> from(InternalProto.Packet proto) {
+        try {
+            return Serializer.fromBinary(proto.getData().toByteArray());
+        }catch (SerializationException ex){
+            throw ex;
+        }
+        catch (Exception ex){
+            throw new SerializationException("from Protobuf fail", ex);
+        }
+    }
+
+    private static InternalProto.Packet build(Packet<?> packet) {
+        try {
+            return InternalProto.Packet.newBuilder().setData(ByteString.copyFrom(Serializer.toBinary(packet))).build();
+        }catch (SerializationException ex){
+            throw ex;
+        }
+        catch (Exception ex){
+            throw new SerializationException("build Protobuf fail", ex);
+        }
+    }
+
+    static {
+        Transforms.addTransform(Packet.class, InternalProto.Packet.class, Packet::from, Packet::build);
     }
 
 

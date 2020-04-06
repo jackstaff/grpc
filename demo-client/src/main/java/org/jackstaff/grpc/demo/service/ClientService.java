@@ -10,8 +10,10 @@ import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -36,6 +38,10 @@ public class ClientService {
         walkThroughHelloService();
         LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(20));
         walkThroughAdvanceHelloService();
+        hello();
+    }
+
+    public void hello(){
     }
 
     public void walkThroughHelloService()  throws Exception{
@@ -97,8 +103,18 @@ public class ClientService {
         logger.info("sayHello reply:"+advancedHelloService.sayHello("hello"));
 
         logger.info("start postMessage.."+now());
-        advancedHelloService.postMessage("it's post message");
-        logger.info("end postMessage.."+now());
+        int pi = advancedHelloService.postMessage("it's post message");
+        logger.info("end postMessage.."+now()+", result:"+pi);
+        logger.info("start async postMessage.."+now());
+        MessageChannel<Integer> channel =new MessageChannel<>(t->{
+            logger.info("async postMessage result:"+t+",,");
+            //Throwable error = channel.getError();
+        }, -888,  Duration.ofSeconds(10), -999);
+        advancedHelloService.postMessage("hello", channel);
+
+        logger.info("start lotsOfReplies (UnaryServerStreaming)..");
+        List<HelloResponse> replies =advancedHelloService.lotsOfReplies("USS");
+        logger.info("sync.lotsOfReplies..{}..response.list.{},{}", now(), replies.size(), replies.toString());
 
         logger.info("start lotsOfReplies (server streaming)..");
         HelloResponse ssCompleteMessage = new HelloResponse("I (the client side) receive this when complete");
