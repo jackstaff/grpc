@@ -182,7 +182,7 @@ public class MyHelloService implements HelloService {
 public interface HelloService {
 
 
-    //for server streaming, it indicate the channel will closed after call Consumer.accept() only one times
+    //it indicate the channel will closed after call Consumer.accept() only one times
     @AsynchronousUnary
     default void sayHello(String greeting, Consumer<String> reply) {
         //reply.accept(sayHello(greeting));
