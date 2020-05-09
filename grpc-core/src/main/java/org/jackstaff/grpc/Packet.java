@@ -1,9 +1,20 @@
-package org.jackstaff.grpc;
+/*
+ * Copyright 2020 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-import com.google.protobuf.ByteString;
-import org.jackstaff.grpc.exception.SerializationException;
-import org.jackstaff.grpc.internal.InternalProto;
-import org.jackstaff.grpc.internal.Serializer;
+package org.jackstaff.grpc;
 
 import java.util.Arrays;
 import java.util.function.Consumer;
@@ -12,7 +23,10 @@ import java.util.function.Consumer;
  * the package for interact client side and server side
  * @author reco@jackstaff.org
  */
-public class Packet<T> implements Command {
+public class Packet<T> {
+
+    private static final int OK = 0;
+    private static final int EXCEPTION = 1;
 
     private int command;
     private T payload;
@@ -54,10 +68,6 @@ public class Packet<T> implements Command {
                 '}';
     }
 
-    boolean isOk(){
-        return command == OK;
-    }
-
     boolean isException(){
         return command == EXCEPTION;
     }
@@ -70,67 +80,12 @@ public class Packet<T> implements Command {
         return new Packet<>(OK, value);
     }
 
-    static Packet<?> message(Object value){
-        return new Packet<>(MESSAGE, value);
-    }
-
     Object[] unboxing(){
         return Arrays.stream((Object[])payload).map(a->a ==null || a.getClass().equals(Object.class) ? null : a).toArray();
     }
 
-    Object[] unboxing(int length){
-        return Arrays.copyOf(unboxing(), length);
-    }
-
     static Packet<Object[]> boxing(Object[] args){
-        return boxing(0, args);
+        return new Packet<>(0, Arrays.stream(args).map(a-> a == null || a instanceof Consumer ? new Object() : a).toArray());
     }
-
-    static Packet<Object[]> boxing(int command, Object[] args){
-        return new Packet<>(command, Arrays.stream(args).map(a-> a == null || a instanceof Consumer ? new Object() : a).toArray());
-    }
-
-    String commandName(){
-        return commandName(command);
-    }
-
-    public static String commandName(int command){
-        switch (command) {
-            case COMPLETED: return "COMPLETED";
-            case EXCEPTION: return "EXCEPTION";
-            case TIMEOUT: return "TIMEOUT";
-            case UNREACHABLE: return "UNREACHABLE";
-            case OK: return "OK";
-            default:
-                return "UNKNOWN";
-        }
-    }
-
-    private static Packet<?> from(InternalProto.Packet proto) {
-        try {
-            return Serializer.fromBinary(proto.getData().toByteArray());
-        }catch (SerializationException ex){
-            throw ex;
-        }
-        catch (Exception ex){
-            throw new SerializationException("from Protobuf fail", ex);
-        }
-    }
-
-    private static InternalProto.Packet build(Packet<?> packet) {
-        try {
-            return InternalProto.Packet.newBuilder().setData(ByteString.copyFrom(Serializer.toBinary(packet))).build();
-        }catch (SerializationException ex){
-            throw ex;
-        }
-        catch (Exception ex){
-            throw new SerializationException("build Protobuf fail", ex);
-        }
-    }
-
-    static {
-        Transforms.addTransform(Packet.class, InternalProto.Packet.class, Packet::from, Packet::build);
-    }
-
 
 }

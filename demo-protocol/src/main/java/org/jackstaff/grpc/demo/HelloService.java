@@ -2,6 +2,9 @@ package org.jackstaff.grpc.demo;
 
 import java.util.function.Consumer;
 
+/**
+ *
+ */
 
 public interface HelloService {
 

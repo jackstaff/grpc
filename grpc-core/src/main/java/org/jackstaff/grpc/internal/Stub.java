@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.jackstaff.grpc.internal;
 
 import io.grpc.CallOptions;
@@ -43,7 +59,7 @@ public class Stub<S extends AbstractStub<S>, ReqT, RespT> {
         CallOptions options = CallOptions.DEFAULT.withAuthority(authority);
         switch (descriptor.getMethodType()) {
             case Unary:
-            case UnaryServerStreaming:
+            case BlockingServerStreaming:
                 this.stub =(S)new BlockingStub(channel, options);
                 break;
             default:
@@ -69,8 +85,8 @@ public class Stub<S extends AbstractStub<S>, ReqT, RespT> {
     }
 
     public void attachDeadline(Duration duration) {
-        Optional.of(Optional.ofNullable(duration).filter(d->d.getSeconds()>=1).orElse(defaultTimeout)).filter(d->d.getSeconds()>=1).
-                ifPresent(t -> stub = stub.withDeadlineAfter(t.toMillis()+2000, TimeUnit.MILLISECONDS));
+        Optional.of(Optional.ofNullable(duration).filter(d->d.toMillis()>300).orElse(defaultTimeout)).filter(d->d.toMillis()>300).
+                ifPresent(t -> stub = stub.withDeadlineAfter(t.toMillis(), TimeUnit.MILLISECONDS));
     }
 
     public <T> void attach(HeaderMetadata<T> metadata, T value) {

@@ -1,16 +1,19 @@
 package org.jackstaff.grpc.demo.service;
 
-import org.jackstaff.grpc.MessageChannel;
+import com.google.gson.Gson;
+import io.grpc.StatusRuntimeException;
+import org.jackstaff.grpc.MessageStream;
+import org.jackstaff.grpc.Status;
 import org.jackstaff.grpc.annotation.Client;
 import org.jackstaff.grpc.demo.*;
 import org.jackstaff.grpc.demo.common.interceptor.Credential;
+import org.jackstaff.grpc.demo.protocol.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -34,21 +37,43 @@ public class ClientService {
     @Client(authority = Constant.DEMO_SERVER, interceptor = Credential.class)
     private AdvancedHelloService advancedHelloService;
 
-    public void walkThrough() throws Exception{
-        walkThroughHelloService();
-        LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(20));
-        walkThroughAdvanceHelloService();
-        hello();
-    }
+    @Client(authority = Constant.DEMO_SERVER, interceptor = Credential.class)
+    private CustomerService customerService;
 
-    public void hello(){
+    public void walkThrough() throws Exception{
+        walkThroughCustomerService();
+        walkThroughHelloService();
+        walkThroughAdvanceHelloService();
+
+     }
+
+    public void walkThroughCustomerService(){
+        logger.info("........CustomerService..........");
+        DataModel dm = customerService.getDataModel(new Id(100));
+        logger.info("getDataModel result:"+new Gson().toJson(dm));
+        customerService.getDataModel(new Id(Constant.INVALID_ID),
+                new MessageStream<>(ms -> logger.info("getDataModel with INVALID_ID, async result: errorCode:"+
+                        ms.getCode()+",description:"+ms.getDescription())));
+        customerService.welcomeCustomers(new Greeting("hello", null,true), new MessageStream<>(ms->{
+            logger.info(now()+" welcomeCustomers response: "+ms);
+        }, Constant.DEFAULT_TIMEOUT));
+        Consumer<Customer> customerConsumer = customerService.sendCustomers(greeting -> logger.info(".."+greeting.getMessage()));
+        for (int i = 10; i >=0; i--) {
+            customerConsumer.accept(new Customer(i, "namex"+i, Level.VIP, null));
+        }
+        MessageStream<Greeting> greetings= (MessageStream<Greeting>)customerService.bidiGreeting(new MessageStream<>(ms->{
+            logger.info("bidiGreeting response:" +ms);
+        }, Duration.ofSeconds(30)));
+        for (int i = 0; i < 20; i++) {
+            int delay = i+1;
+            schedule.schedule(()->greetings.accept(new Greeting("hello"+delay, new byte[0], delay==20)), delay, TimeUnit.SECONDS);
+        }
     }
 
     public void walkThroughHelloService()  throws Exception{
         logger.info("........helloService..........");
         String reply = helloService.sayHello("hello world.");
         logger.info("sayHello..result {}", reply);
-
         logger.info("idle 5 second for next step..");
         LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(5));
         logger.info("start lotsOfReplies (server streaming)..");
@@ -83,7 +108,7 @@ public class ClientService {
         for (int i = 0; i < 10; i++) {
             int index = i;
             schedule.schedule(()->{
-                if (((MessageChannel<HelloRequest>)reqs).isClosed()){
+                if (((MessageStream<HelloRequest>)reqs).isClosed()){
                     logger.info("bidiHello channel is closed, "+index);
                     return;
                 }
@@ -102,36 +127,25 @@ public class ClientService {
 
         logger.info("sayHello reply:"+advancedHelloService.sayHello("hello"));
 
-        logger.info("start postMessage.."+now());
-        int pi = advancedHelloService.postMessage("it's post message");
-        logger.info("end postMessage.."+now()+", result:"+pi);
-        logger.info("start async postMessage.."+now());
-        MessageChannel<Integer> channel =new MessageChannel<>(t->{
-            logger.info("async postMessage result:"+t+",,");
-            //Throwable error = channel.getError();
-        }, -888,  Duration.ofSeconds(10), -999);
-        advancedHelloService.postMessage("hello", channel);
+        logger.info("start async sayHello.."+now());
+        MessageStream<String> channel =new MessageStream<>(mt->{
+            logger.info("async postMessage result:"+mt+",,");
+        }, Constant.DEFAULT_TIMEOUT);
+        advancedHelloService.sayHello("hello", channel);
 
         logger.info("start lotsOfReplies (UnaryServerStreaming)..");
         List<HelloResponse> replies =advancedHelloService.lotsOfReplies("USS");
         logger.info("sync.lotsOfReplies..{}..response.list.{},{}", now(), replies.size(), replies.toString());
 
         logger.info("start lotsOfReplies (server streaming)..");
-        HelloResponse ssCompleteMessage = new HelloResponse("I (the client side) receive this when complete");
-        HelloResponse ssErrorMessage = new HelloResponse("I (the client side) receive this when error");
-        HelloResponse ssTimeoutMessage = new HelloResponse("I (the client side) receive this when timeout");
         Consumer<HelloResponse> ssConsumer = response -> {
-            if (ssErrorMessage == response){
-                logger.info("lotsOfReplies..{}..receive ERROR{}", now(), response);
-                return;
-            }
+
             logger.info("lotsOfReplies..{}..response.{}", now(), response);
         };
-        int ssTimeoutSeconds = 10;
-//        String ssGreeting = "hello friends!, it will timeout because this string.length() > ssTimeoutSeconds";
-        String ssGreeting = "hello!";
-        MessageChannel<HelloResponse> ssChannel = new MessageChannel<>(ssConsumer,
-                ssErrorMessage, ssCompleteMessage, Duration.ofSeconds(ssTimeoutSeconds), ssTimeoutMessage);
+        String ssGreeting = "hello friends!";
+        MessageStream<HelloResponse> ssChannel = new MessageStream<>(ms->{
+            logger.info(""+ms);
+        }, Constant.DEFAULT_TIMEOUT);
         advancedHelloService.lotsOfReplies(ssGreeting, ssChannel);
         IntStream.range(1, 60).forEach(i->schedule.schedule(()->{
             logger.info("lotsOfReplies.(server streaming) channel "+ssChannel);
@@ -146,13 +160,13 @@ public class ClientService {
         csSocialInfo.setFriends(Arrays.asList("reco", "lily", "laura", "yellow", "red", "black", "white"));
         logger.info("lotsOfGreetings send friend list: "+csSocialInfo.getFriends());
         Consumer<HelloRequest> csGreetings = advancedHelloService.lotsOfGreetings(csSocialInfo);
-        MessageChannel<HelloRequest> csChannel = (MessageChannel<HelloRequest>) csGreetings;
+        MessageStream<HelloRequest> csChannel = (MessageStream<HelloRequest>) csGreetings;
         for (int i = 0; i < csSocialInfo.getFriends().size(); i++) {
             int index = i;
             HelloRequest request = new HelloRequest("hi, "+csSocialInfo.getFriends().get(index));
             schedule.schedule(()->{
                 if (csChannel.isClosed()){
-                    logger.info("client streaming channel closed "+csChannel+"("+csChannel.getError()+"), request NOT send "+request);
+                    logger.info("client streaming channel closed "+csChannel+"("+csChannel.getStatus()+"), request NOT send "+request);
                     return;
                 }
                 csChannel.accept(request);
@@ -172,32 +186,18 @@ public class ClientService {
         biSocialInfo.setFriends(Arrays.asList("reco", "lily", "laura", "yellow", "red", "black", "white"));
         logger.info("bidiHello send friend list: "+biSocialInfo.getFriends());
 
-        HelloResponse bisCompleteMessage = new HelloResponse("I (the client side) receive this when complete");
-        HelloResponse bisErrorMessage = new HelloResponse("I (the client side) receive this when error");
-        HelloResponse bisTimeoutMessage = new HelloResponse("I (the client side) receive this when timeout");
-        Consumer<HelloResponse> bisConsumer = response -> {
-            if (bisErrorMessage == response){
-                logger.info("bidiHello..{}..receive ERROR{}", now(), response);
-                return;
-            }
-            if (bisTimeoutMessage == response){
-                logger.info("bidiHello..{}..receive TIMEOUT{}", now(), response);
-                return;
-            }
+        MessageStream<HelloResponse> bisChannel = new MessageStream<>(ms->{
+            logger.info("bidiHello..{}..response.{}", now(), ms);
 
-            logger.info("bidiHello..{}..response.{}", now(), response);
-        };
-        int bisTimeoutSeconds = 30;
-        MessageChannel<HelloResponse> bisChannel = new MessageChannel<>(bisConsumer,
-                bisErrorMessage, bisCompleteMessage, Duration.ofSeconds(bisTimeoutSeconds), bisTimeoutMessage);
+        },  Constant.DEFAULT_TIMEOUT);
         Consumer<HelloRequest> biGreetings = advancedHelloService.bidiHello(biSocialInfo, bisChannel);
-        MessageChannel<HelloRequest> bicChannel = (MessageChannel<HelloRequest>) biGreetings;
+        MessageStream<HelloRequest> bicChannel = (MessageStream<HelloRequest>) biGreetings;
         for (int i = 0; i < biSocialInfo.getFriends().size(); i++) {
             int index = i;
             HelloRequest request = new HelloRequest("hi, "+biSocialInfo.getFriends().get(i));
             schedule.schedule(()->{
                 if (bicChannel.isClosed()){
-                    logger.info("bidi channel closed "+bicChannel+"("+bicChannel.getError()+"), request NOT send "+request);
+                    logger.info("bidi channel closed "+bicChannel+"("+bicChannel.getStatus()+"), request NOT send "+request);
                     return;
                 }
                 bicChannel.accept(request);
@@ -216,7 +216,8 @@ public class ClientService {
         try {
             String s  = advancedHelloService.deny("the message");
             logger.info("never here, since deny call will throw exception.");
-        }catch (Exception ex){
+        }catch (StatusRuntimeException ex){
+            logger.info("STATUS_EXCEPTION:"+ Status.fromThrowable(ex));
             ex.printStackTrace();
         }
 

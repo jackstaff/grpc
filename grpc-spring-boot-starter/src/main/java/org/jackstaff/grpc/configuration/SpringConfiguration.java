@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.jackstaff.grpc.configuration;
 
 import org.jackstaff.grpc.Interceptor;
@@ -47,16 +63,17 @@ public class SpringConfiguration {
         return Arrays.stream(types).map(SpringConfiguration::getInterceptor).collect(Collectors.toList());
     }
 
-    public org.jackstaff.grpc.Server newServer() throws Exception {
+    @SuppressWarnings("unchecked")
+    public org.jackstaff.grpc.Server newServer() {
         org.jackstaff.grpc.Server server = new org.jackstaff.grpc.Server();
         Optional.ofNullable(configuration.getServer()).ifPresent(cfg -> {
             appContext.getBeansWithAnnotation(Server.class).values().forEach(bean -> {
                 Server s = bean.getClass().getAnnotation(Server.class);
-                Class<?>[] services = Optional.of(s.service()).filter(a -> a.length > 0).orElseGet(s::value);
+                Class<Object>[] services = Optional.of(s.service()).filter(a -> a.length > 0).orElseGet(s::value);
                 if (services.length == 0) {
                     throw new ValidationException(bean.getClass().getName() + "@Server service is empty");
                 }
-                Arrays.stream(services).forEach(type->server.register((Class)type, bean, SpringConfiguration.getInterceptors(s.interceptor())));
+                Arrays.stream(services).forEach(type->server.register(type, bean, getInterceptors(s.interceptor())));
             });
             server.start(cfg);
             if (appContext instanceof ConfigurableApplicationContext){
@@ -67,7 +84,7 @@ public class SpringConfiguration {
         return server;
     }
 
-    public org.jackstaff.grpc.Client newClient() throws Exception {
+    public org.jackstaff.grpc.Client newClient() {
         org.jackstaff.grpc.Client client = new org.jackstaff.grpc.Client((type, handler) ->
                 Proxy.newProxyInstance(type.getClassLoader(), new Class[]{type}, handler::invoke));
         Optional.ofNullable(configuration.getClient()).ifPresent(client::setup);
@@ -79,9 +96,9 @@ public class SpringConfiguration {
         return client;
     }
 
-    private void inject(org.jackstaff.grpc.Client packetClient, String name, Object bean) {
+    private void inject(org.jackstaff.grpc.Client theClient, String name, Object bean) {
         Map<Field, Client> fields = clientFields(bean);
-        fields.forEach((field, client) -> inject(packetClient, name, bean, field, client));
+        fields.forEach((field, client) -> inject(theClient, name, bean, field, client));
     }
 
     private Map<Field, Client> clientFields(Object bean) {
@@ -95,7 +112,7 @@ public class SpringConfiguration {
         return fields;
     }
 
-    private void inject(org.jackstaff.grpc.Client packetClient, String name, Object bean, Field field, Client client) {
+    private void inject(org.jackstaff.grpc.Client theClient, String name, Object bean, Field field, Client client) {
         String authority = Optional.of(client.authority()).filter(a -> !a.isEmpty()).orElseGet(client::value);
         if (authority.isEmpty()) {
             throw new ValidationException(name + ":" + field.getName() + "@Client value/authority is empty");
@@ -106,7 +123,7 @@ public class SpringConfiguration {
         field.setAccessible(true);
         try {
             if (field.get(bean) == null) {
-                Object value = packetClient.autowired(authority, field.getType(), client.required(), SpringConfiguration.getInterceptors(client.interceptor()));
+                Object value = theClient.autowired(authority, field.getType(), client.required(), getInterceptors(client.interceptor()));
                 field.set(bean, value);
             }
         } catch (Throwable ex) {

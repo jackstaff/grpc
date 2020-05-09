@@ -14,12 +14,15 @@ public class LoggerInfo implements Interceptor {
     @Override
     public void before(Context context) throws Exception {
         context.setAttribute(this, System.nanoTime());
+        Optional.ofNullable(LoggerFactory.getLogger(context.getType())).filter(Logger::isInfoEnabled).ifPresent(logger ->
+            logger.info("BEFORE: {}.{}", context.getType().getName(), context.getMethod().getName())
+        );
     }
 
     @Override
     public void returning(Context context, @Nullable Object result) {
         Optional.ofNullable(LoggerFactory.getLogger(context.getType())).filter(Logger::isInfoEnabled).ifPresent(logger -> {
-            logger.info("{}.{}, useTime:{}ns, result: {}",
+            logger.info("RETURNING: {}.{}, useTime:{}ns, result: {}",
                     context.getType().getName(), context.getMethod().getName(),
                     System.nanoTime()-(Long) context.getAttribute(this), result);
         });
@@ -28,14 +31,14 @@ public class LoggerInfo implements Interceptor {
     @Override
     public void recall(Context context, @Nonnull Exception ex) {
         Optional.ofNullable(LoggerFactory.getLogger(context.getType())).filter(Logger::isInfoEnabled).ifPresent(logger -> {
-            logger.info("{}.{}, recalled! exception: {}", context.getType().getName(), context.getMethod().getName(), ex.getMessage());
+            logger.info("RECALL: {}.{}, recalled! exception: {}", context.getType().getName(), context.getMethod().getName(), ex.getMessage());
         });
     }
 
     @Override
     public void throwing(Context context, @Nonnull Exception ex) {
         Optional.ofNullable(LoggerFactory.getLogger(context.getType())).filter(Logger::isInfoEnabled).ifPresent(logger -> {
-            logger.info("{}.{}, useTime:{}ns, throw exception : {}",
+            logger.info("THROWING: {}.{}, useTime:{}ns, throw exception : {}",
                     context.getType().getName(), context.getMethod().getName(),
                     System.nanoTime()-(Long) context.getAttribute(this), ex);
         });

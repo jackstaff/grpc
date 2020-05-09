@@ -1,11 +1,25 @@
+/*
+ * Copyright 2020 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.jackstaff.grpc;
 
 import io.grpc.BindableService;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.ServiceDescriptor;
-import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
-import org.jackstaff.grpc.internal.HeaderMetadata;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -88,27 +102,26 @@ class ServerBinder<T> implements BindableService {
                         Context context = new Context(descriptor, args, descriptor.getBean());
                         Packet<?> result = Utils.walkThrough(context, descriptor.getInterceptors());
                         if (result.isException()) {
-                            observer.onError(throwable((Exception) result.getPayload()));
+                            observer.onError(Utils.throwable((Exception) result.getPayload()));
                             return;
                         }
                         Optional.ofNullable(result.getPayload()).map(respTransform::build).ifPresent(observer::onNext);
                         observer.onCompleted();
                     }catch (Throwable ex){
-                        observer.onError(throwable(ex));
+                        observer.onError(Utils.throwable(ex));
                     }
                     break;
                 case ServerStreaming:
+                    MessageStream<?> respStream = new MessageStream<>(respTransform.fromObserver(observer));
                     try {
-                        StreamObserver<Object> pojoObserver= respTransform.fromObserver(observer);
-                        MessageChannel<?> channel = new MessageChannel<>(observer, pojoObserver::onNext, HeaderMetadata.getTimeoutMillSeconds()).setV2(true).ready();
-                        Object[] args = new Object[]{reqTransform.from(request), channel};
+                        Object[] args = new Object[]{reqTransform.from(request), respStream};
                         Context context = new Context(descriptor, args, descriptor.getBean());
                         Packet<?> result = Utils.walkThrough(context, descriptor.getInterceptors());
                         if (result.isException()) {
-                            observer.onError(throwable((Exception) result.getPayload()));
+                            respStream.error(Utils.throwable((Exception) result.getPayload()));
                         }
                     }catch (Throwable ex){
-                        observer.onError(throwable(ex));
+                        respStream.error(Utils.throwable(ex));
                     }
                     break;
             }
@@ -119,33 +132,26 @@ class ServerBinder<T> implements BindableService {
             switch (descriptor.getMethodType()){
                 case ClientStreaming:
                 case BidiStreaming:
+                    MessageStream<?> respStream = new MessageStream<>(respTransform.fromObserver(observer));
                     try {
-                        StreamObserver<Object> pojoObserver= respTransform.fromObserver(observer);
-                        MessageChannel<?> respChannel = new MessageChannel<>(observer, pojoObserver::onNext, HeaderMetadata.getTimeoutMillSeconds()).setV2(true).ready();
                         if (descriptor.getMethodType() == MethodType.ClientStreaming){
-                            respChannel.unary();
+                            respStream.unary();
                         }
-                        Context context = new Context(descriptor, new Object[]{respChannel}, descriptor.getBean());
+                        Context context = new Context(descriptor, new Object[]{respStream}, descriptor.getBean());
                         Packet<?> result = Utils.walkThrough(context, descriptor.getInterceptors());
-                        if (result.isException()) {
-                            observer.onError(throwable((Exception) result.getPayload()));
-                            return null;
+                        if (!result.isException()) {
+                            MessageStream<Object> reqStream = MessageStream.build((Consumer<Object>)result.getPayload()).link(respStream);
+                            return reqTransform.buildObserver(reqStream.toStreamObserver());
                         }
-                        MessageChannel<Object> reqChannel = MessageChannel.build((Consumer<Object>)result.getPayload()).setV2(true);
-                        reqChannel.link(respChannel);
-                        return reqTransform.buildObserver(new ChannelObserver<>(reqChannel));
+                        respStream.error(Utils.throwable((Exception) result.getPayload()));
                     }catch (Exception ex){
-                        observer.onError(throwable(ex));
-                        return null;
+                        respStream.error(Utils.throwable(ex));
                     }
+                    return null;
                 default:
                     throw new AssertionError("invalid method type "+descriptor.getMethod());
             }
         }
-    }
-
-    private Throwable throwable(Throwable ex){
-        return Status.INTERNAL.withCause(ex).withDescription(ex.getMessage()).asRuntimeException();
     }
 
 

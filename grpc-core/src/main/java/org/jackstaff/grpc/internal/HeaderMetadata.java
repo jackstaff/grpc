@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.jackstaff.grpc.internal;
 
 import io.grpc.Attributes;
@@ -8,7 +24,6 @@ import io.grpc.stub.AbstractStub;
 import io.grpc.stub.MetadataUtils;
 
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author reco@jackstaff.org
@@ -18,16 +33,17 @@ public class HeaderMetadata<T> {
     public static final String AUTHORITY = "authority";
     public static final String REMOTE_ADDR = "remote-addr";
     public static final String LOCAL_ADDR = "local-addr";
-    public static final String TIMEOUT = "grpc-timeout";
 
-    private static final String JACKSTAFF = "jackstaff-grpc";
+    private static final String JACKSTAFF = "grpc-jackstaff";
 
     private final Metadata.Key<T> key;
-    private Context.Key<Metadata> contextKey;
-    private Context context;
+    private final Context.Key<Metadata> contextKey;
+    private final Context context;
 
     HeaderMetadata(Metadata.Key<T> key) {
         this.key = key;
+        this.contextKey = Context.key(JACKSTAFF);//  Context.keyWithDefault(JACKSTAFF, new Metadata());
+        this.context = Context.ROOT.withValue(contextKey, new Metadata());
     }
 
     public static HeaderMetadata<String> ROOT = string(JACKSTAFF);
@@ -94,32 +110,7 @@ public class HeaderMetadata<T> {
         Optional.ofNullable(attributes.get(Grpc.TRANSPORT_ATTR_LOCAL_ADDR)).map(Object::toString).
                 ifPresent(addr->metadata.put(stringKey(LOCAL_ADDR), addr));
         metadata.merge(headers);
-        if (this.context ==null) synchronized (this) {
-            this.contextKey = Context.keyWithDefault(ROOT.key.name(), new Metadata());
-            this.context = Context.ROOT.withValue(contextKey, new Metadata());
-        }
         return context.withValue(contextKey, metadata);
-    }
-
-    public static long getTimeoutMillSeconds(){
-        String t = stringValue(TIMEOUT);
-        if (t == null || t.length() <2){
-            return 0;
-        }
-        char unit = t.charAt(t.length()-1);
-        long count = Long.parseLong(t.substring(0, t.length()-1));
-        switch (unit){
-            case 'u':
-                return count/1000;
-            case 'm':
-                return count;
-            case 'S':
-                return count *1000;
-            case 'M':
-                return count * 60*1000;
-            default:
-                return 0;
-        }
     }
 
 }

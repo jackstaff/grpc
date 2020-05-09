@@ -1,0 +1,132 @@
+
+syntax = "proto3";
+
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+
+option java_multiple_files = false;
+option java_package = "org.jackstaff.grpc.demo.protocol";
+option java_outer_classname = "CustomerProto";
+
+service CustomerService {
+
+    rpc FindCustomer ( Id ) returns ( Customer ) {}
+
+    rpc WelcomeCustomers (Greeting) returns (stream Customer) {}
+
+    rpc SendCustomers (stream Customer) returns (Greeting) {}
+
+    rpc BidiGreeting (stream Greeting) returns (stream Greeting) {}
+
+    rpc GetLevel ( Credential ) returns ( Customer.Office ) {}
+
+    rpc GetDataModel (Id) returns (DataModel) {}
+}
+
+
+enum Level {
+    COMMON =0;
+    VIP = 1;
+    NORMAL = 2;
+}
+
+message Credential {
+    enum Entry {
+        UNIVERSAL = 0;
+        WEB = 1;
+        MOBILE = 2;
+    }
+    string user =1;
+    string password = 2;
+    Entry entry = 3;
+    repeated Level level = 4;
+}
+
+message Customer {
+    message Office {
+        string title = 1;
+        Address address = 2;
+    }
+    int32 id =1;
+    string name = 2;
+    Level level = 3;
+    repeated Office office = 4;
+}
+
+message Address {
+    string country =1;
+    string street =2;
+    int32 room = 3;
+}
+
+message Greeting {
+    string message =1;
+    bytes avatar = 2;
+    bool smile=3;
+}
+
+message DataModel {
+
+    bool theBool =1;
+    double theDouble =2;
+    float theFloat =3;
+    int32 theInt32 =4;
+    int64 theInt64 =5;
+    uint32 theUInt32 =6;
+    uint64 theUInt64 =7;
+    sint32 theSInt32 =8;
+    sint64 theSInt64 =9;
+    fixed32 theFixed32 =10;
+    fixed64 theFixed64 =11;
+    sfixed32 theSFixed32 =12;
+    sfixed64 theSFixed64 =13;
+    string theString =14;
+    bytes theBytes = 15;
+
+    google.protobuf.DoubleValue theDoubleValue = 16;
+    google.protobuf.FloatValue theFloatValue = 17;
+    google.protobuf.Int32Value theInt32Value = 18;
+    google.protobuf.Int64Value theInt64Value = 19;
+    google.protobuf.UInt32Value theUInt32Value = 20;
+    google.protobuf.UInt64Value theUInt64Value = 21;
+    google.protobuf.BoolValue theBoolValue = 22;
+    google.protobuf.StringValue theStringValue = 23;
+    google.protobuf.BytesValue theBytesValue = 24;
+    google.protobuf.Duration theDuration = 25;
+    google.protobuf.Timestamp theTimestamp = 26;
+
+    repeated int32 theRepeatedInt32 = 27;
+    repeated string theRepeatedString = 28;
+    repeated bytes theRepeatedBytes = 29;
+    repeated google.protobuf.DoubleValue theRepeatedDoubleValue = 30;
+    repeated google.protobuf.StringValue theRepeatedStringValue = 31;
+    repeated google.protobuf.BytesValue theRepeatedBytesValue = 32;
+    repeated Level theRepeatedEnum = 33;
+    repeated Address theRepeatedMessage = 34;
+
+    TheEmbedEnum theEnum = 35;
+    TheEmbedMessage theMessage = 36;
+
+    oneof TheOneOf {
+        bytes ooBytes = 39;
+        bool ooBool = 40;
+        int32 ooInt32 = 41;
+        string ooString = 42;
+        google.protobuf.DoubleValue ooDoubleValue = 43;
+        Level ooEnum = 44;
+        Address ooMessage = 45;
+    };
+
+    message TheEmbedMessage {
+        int32 id =1;
+        TheEmbedEnum status = 2;
+    };
+
+    enum TheEmbedEnum {
+        SUCCESS = 0;
+        FAILURE = 1;
+    }
+
+}

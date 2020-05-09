@@ -1,11 +1,25 @@
+/*
+ * Copyright 2020 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.jackstaff.grpc;
 
 import io.grpc.ManagedChannel;
-import io.grpc.StatusRuntimeException;
-import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
+import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import org.jackstaff.grpc.configuration.ClientConfig;
-import org.jackstaff.grpc.exception.StatusException;
 import org.jackstaff.grpc.exception.ValidationException;
 import org.jackstaff.grpc.internal.HeaderMetadata;
 import org.jackstaff.grpc.internal.Serializer;
@@ -21,7 +35,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import static org.jackstaff.grpc.Command.*;
 
 /**
  * the client side delegate
@@ -37,8 +50,8 @@ public class Client {
 
     private static class MethodKey {
 
-        private Class<?> type;
-        private Method method;
+        private final Class<?> type;
+        private final Method method;
 
         public MethodKey(Class<?> type, Method method) {
             this.type = type;
@@ -88,7 +101,7 @@ public class Client {
      */
     public void setup(Map<String, ClientConfig> authorityClients) {
         authorityClients.forEach((authority, cfg) -> {
-            NettyChannelBuilder builder = NettyChannelBuilder.forAddress(cfg.getHost(), cfg.getPort());
+            ManagedChannelBuilder<?> builder = ManagedChannelBuilder.forAddress(cfg.getHost(), cfg.getPort());
             if (cfg.getKeepAliveTime() > 0) {
                 builder.keepAliveTime(cfg.getKeepAliveTime(), TimeUnit.SECONDS);
                 builder.keepAliveWithoutCalls(cfg.isKeepAliveWithoutCalls());
@@ -108,7 +121,7 @@ public class Client {
             if (cfg.getMaxInboundMessageSize() > 512 * 1024) {
                 builder.maxInboundMessageSize(cfg.getMaxInboundMessageSize());
             }
-            stubs.put(authority, new Stub<>(authority, builder.build(), Duration.ofSeconds(cfg.getDefaultUnaryTimeout())));
+            stubs.put(authority, new Stub<>(authority, builder.build(), Duration.ofSeconds(cfg.getDefaultTimeout())));
         });
     }
 
@@ -122,6 +135,7 @@ public class Client {
      * @param <T>          T
      * @return autowired proxy instance
      */
+    @SuppressWarnings("unchecked")
     public <T> T autowired(String authority, Class<T> type, boolean required, List<Interceptor> interceptors) {
         Stub<?,?,?> prototype = stubs.get(authority);
         if (prototype == null) {
@@ -150,19 +164,17 @@ public class Client {
         return (T) bean;
     }
 
-    @SuppressWarnings("unchecked, rawtypes")
+    @SuppressWarnings("unchecked")
     private Object walkThrough(Stub<?,?,?> prototype, MethodDescriptor descriptor, Object proxy,
                                Object[] args, List<Interceptor> interceptors) throws Exception{
-        Stub stub = new Stub(prototype, descriptor);
+        Stub<?,?,?> stub = new Stub<>(prototype, descriptor);
         Context context =new Context(descriptor, args, proxy).stub(stub);
         Packet<?> packet = Utils.before(context, interceptors);
         if (!packet.isException()){
             try {
-                packet = descriptor.isV2() ? v2StubCall(context, stub) : v1StubCall(context, stub);
-            }catch (StatusRuntimeException ex){
-                packet = Packet.throwable(new StatusException(ex));
-            }catch (Exception ex){
-                packet = Packet.throwable(ex);
+                packet = descriptor.isV2() ? v2StubCall(context, stub) : v1StubCall(context, (Stub<?,Packet<?>,Packet<?>>)stub);
+            }catch (Exception ex0){
+                packet = Packet.throwable(ex0);
             }
             Utils.after(context, interceptors, packet);
         }
@@ -182,42 +194,36 @@ public class Client {
                 return Packet.ok(stub.blockingUnary((ReqT) args[0]));
             }
             case AsynchronousUnary: {
-                MessageChannel<RespT> respChannel = MessageChannel.build((Consumer<RespT>) args[1]).unary().setV2(true).ready();
-                stub.attachDeadline(respChannel.getTimeout());
-                ChannelObserver<RespT> respObserver = new ChannelObserver<>(respChannel);
-                stub.asyncUnary((ReqT)args[0], respObserver);
+                MessageStream<RespT> respStream = MessageStream.build((Consumer<RespT>) args[1]).unary();
+                stub.attachDeadline(respStream.timeout());
+                stub.asyncUnary((ReqT)args[0], respStream.toStreamObserver());
                 return new Packet<>();
             }
-            case UnaryServerStreaming: {
+            case BlockingServerStreaming: {
                 List<RespT> list = new ArrayList<>();
                 stub.attachDefaultDeadline();
                 stub.blockingServerStreaming((ReqT)args[0]).forEachRemaining(list::add);
                 return Packet.ok(list);
             }
-            case ServerStreaming: {//timeout
-                MessageChannel<RespT> respChannel = MessageChannel.build((Consumer<RespT>) args[1]).setV2(true).ready();
-                stub.attachDeadline(respChannel.getTimeout());
-                ChannelObserver<RespT> respObserver = new ChannelObserver<>(respChannel);
-                stub.asyncServerStreaming((ReqT)args[0], respObserver);
+            case ServerStreaming: {
+                MessageStream<RespT> respStream = MessageStream.build((Consumer<RespT>) args[1]);
+                stub.attachDeadline(respStream.timeout());
+                stub.asyncServerStreaming((ReqT)args[0], respStream.toStreamObserver());
                 return new Packet<>();
             }
             case ClientStreaming: {
-                MessageChannel<RespT> respChannel = MessageChannel.build((Consumer<RespT>) args[0]).setV2(true).unary();
-                stub.attachDeadline(respChannel.getTimeout());
-                ChannelObserver<RespT> respObserver = new ChannelObserver<>(respChannel);
-                StreamObserver<ReqT> reqObserver = stub.asyncClientStreaming(respObserver);
-                MessageChannel<ReqT> reqChannel = new MessageChannel<>(reqObserver, reqObserver::onNext, -1);
-                respChannel.link(reqChannel);
-                return Packet.ok(reqChannel);
+                MessageStream<RespT> respStream = MessageStream.build((Consumer<RespT>) args[0]).unary();
+                stub.attachDeadline(respStream.timeout());
+                StreamObserver<ReqT> reqObserver = stub.asyncClientStreaming(respStream.toStreamObserver());
+                MessageStream<ReqT> reqStream = new MessageStream<>(reqObserver).link(respStream);
+                return Packet.ok(reqStream);
             }
             case BidiStreaming: {
-                MessageChannel<RespT> respChannel = MessageChannel.build((Consumer<RespT>) args[0]).setV2(true).ready();
-                stub.attachDeadline(respChannel.getTimeout());
-                ChannelObserver<RespT> respObserver = new ChannelObserver<>(respChannel);
-                StreamObserver<ReqT> reqObserver = stub.asyncBidiStreaming(respObserver);
-                MessageChannel<ReqT> reqChannel = new MessageChannel<>(reqObserver, reqObserver::onNext, -1);
-                respChannel.link(reqChannel);
-                return Packet.ok(reqChannel);
+                MessageStream<RespT> respStream = MessageStream.build((Consumer<RespT>) args[0]);
+                stub.attachDeadline(respStream.timeout());
+                StreamObserver<ReqT> reqObserver = stub.asyncBidiStreaming(respStream.toStreamObserver());
+                MessageStream<ReqT> reqStream = new MessageStream<>(reqObserver).link(respStream);
+                return Packet.ok(reqStream);
             }
             default:
                 return new Packet<>();
@@ -236,60 +242,45 @@ public class Client {
                 MethodDescriptor peer = descriptor.getPeer();
                 stub.attach(HeaderMetadata.ROOT, peer.getSign());
                 Object[] args = Arrays.copyOf(context.getArguments(), peer.getMethod().getParameterCount()); //-1
-                MessageChannel<?> respChannel = descriptor.getChannel(context.getArguments()).unary().ready();
-                MessageObserver respObserver = new MessageObserver(respChannel);
-                stub.asyncUnary(Packet.boxing((int) respChannel.getTimeout().toMillis(), args), respObserver);
+                MessageStream<?> respStream = descriptor.getStream(context.getArguments()).unary();
+                stub.attachDeadline(respStream.timeout());
+                stub.asyncUnary(Packet.boxing(args), respStream.toPacketStreamObserver());
                 return new Packet<>();
             }
-            case UnaryServerStreaming: {
+            case BlockingServerStreaming: {
                 MethodDescriptor peer = descriptor.getPeer();
                 Object[] args = Arrays.copyOf(context.getArguments(), peer.getMethod().getParameterCount()); //+1
                 stub.attach(HeaderMetadata.ROOT, peer.getSign());
                 stub.attachDefaultDeadline();
-                List<Packet<?>> list = new ArrayList<>();
-                Iterator<Packet<?>> iter=stub.blockingServerStreaming(Packet.boxing(args));
-                while (iter.hasNext()) {
-                    Packet<?> pack = iter.next();
-                    switch (pack.getCommand()) {
-                        case MESSAGE:
-                            list.add(pack);
-                            break;
-                        case UNREACHABLE:
-                        case EXCEPTION:
-                            throw (RuntimeException)pack.getPayload();
-                        case TIMEOUT:
-                            throw new StatusException(TIMEOUT);
-                        case COMPLETED:
-                            break;
-                    }
-                }
+                List<Object> list = new ArrayList<>();
+                stub.blockingServerStreaming(Packet.boxing(args)).forEachRemaining(v->list.add(v.getPayload()));
                 return Packet.ok(list);
             }
             case ServerStreaming: {
                 stub.attach(HeaderMetadata.ROOT, descriptor.getSign());
-                MessageChannel<?> respChannel = descriptor.getChannel(context.getArguments());
-                MessageObserver respObserver = new MessageObserver(respChannel);
-                stub.asyncServerStreaming(Packet.boxing((int) respChannel.getTimeout().toMillis(), context.getArguments()), respObserver);
+                MessageStream<?> respStream = descriptor.getStream(context.getArguments());
+                stub.attachDeadline(respStream.timeout());
+                stub.asyncServerStreaming(Packet.boxing(context.getArguments()), respStream.toPacketStreamObserver());
                 return new Packet<>();
             }
             case VoidClientStreaming:
             case ClientStreaming: {
                 stub.attach(HeaderMetadata.ROOT, descriptor.getSign());
-                MessageChannel<?> respChannel = descriptor.getChannel(context.getArguments());
-                stub.attach(HeaderMetadata.BINARY_ROOT, Serializer.toBinary(Packet.boxing((int) respChannel.getTimeout().toMillis(), context.getArguments())));
-                MessageObserver respObserver = new MessageObserver(respChannel);
-                MessageChannel<?> reqChannel = new MessageChannel<>(stub.asyncClientStreaming(respObserver));
-                respChannel.link(reqChannel);
-                return Packet.ok(reqChannel);
+                MessageStream<?> respStream = descriptor.getStream(context.getArguments());
+                stub.attach(HeaderMetadata.BINARY_ROOT, Serializer.toBinary(Packet.boxing(context.getArguments())));
+                stub.attachDeadline(respStream.timeout());
+                StreamObserver<Packet<?>> reqObserver = stub.asyncClientStreaming(respStream.toPacketStreamObserver());
+                MessageStream<?> reqStream = new MessageStream<>(new MessageObserver<>(reqObserver)).link(respStream);
+                return Packet.ok(reqStream);
             }
             case BidiStreaming: {
                 stub.attach(HeaderMetadata.ROOT, descriptor.getSign());
-                MessageChannel<?> respChannel = descriptor.getChannel(context.getArguments());
-                stub.attach(HeaderMetadata.BINARY_ROOT, Serializer.toBinary(Packet.boxing((int) respChannel.getTimeout().toMillis(), context.getArguments())));
-                MessageObserver respObserver = new MessageObserver(respChannel);
-                MessageChannel<?> reqChannel = new MessageChannel<>(stub.asyncBidiStreaming(respObserver));
-                respChannel.link(reqChannel);
-                return Packet.ok(reqChannel);
+                MessageStream<?> respStream = descriptor.getStream(context.getArguments());
+                stub.attach(HeaderMetadata.BINARY_ROOT, Serializer.toBinary(Packet.boxing(context.getArguments())));
+                stub.attachDeadline(respStream.timeout());
+                StreamObserver<Packet<?>> reqObserver = stub.asyncBidiStreaming(respStream.toPacketStreamObserver());
+                MessageStream<?> reqStream = new MessageStream<>(new MessageObserver<>(reqObserver)).link(respStream);
+                return Packet.ok(reqStream);
             }
             default:
                 return new Packet<>();

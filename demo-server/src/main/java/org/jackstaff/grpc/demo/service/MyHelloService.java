@@ -1,10 +1,9 @@
 package org.jackstaff.grpc.demo.service;
 
+import org.jackstaff.grpc.annotation.Client;
 import org.jackstaff.grpc.annotation.Server;
-import org.jackstaff.grpc.demo.HelloRequest;
-import org.jackstaff.grpc.demo.HelloResponse;
-import org.jackstaff.grpc.demo.HelloService;
-import org.jackstaff.grpc.demo.SocialInfo;
+import org.jackstaff.grpc.demo.*;
+import org.jackstaff.grpc.demo.protocol.CustomerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,6 +18,9 @@ public class MyHelloService implements HelloService {
 
     Logger logger = LoggerFactory.getLogger(MyHelloService.class);
     ScheduledExecutorService schedule = Executors.newScheduledThreadPool(5);
+
+    @Client(Constant.DEMO_SERVER)
+    private CustomerService customerService;
 
     @Override
     public String sayHello(String greeting) {

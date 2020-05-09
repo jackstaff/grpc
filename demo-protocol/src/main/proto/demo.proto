@@ -1,0 +1,46 @@
+
+syntax = "proto3";
+
+import "common.proto";
+
+option java_multiple_files = false;
+option java_package = "org.jackstaff.grpc.demo.protocol";
+option java_outer_classname = "DemoProto";
+
+service OrderService {
+
+    rpc GetOrderById ( Id ) returns ( Order ) {}
+
+    rpc ListOrdersByVendor (Vendor) returns (stream Order) {}
+
+    rpc CreateOrders (stream Order) returns ( Count ) {}
+
+}
+
+service GoodsService {
+
+    rpc CountingGoods (stream Goods) returns (stream Count) {}
+
+}
+
+message Count {
+    int32 count =1;
+}
+
+message Vendor {
+    string vendor =1;
+}
+
+message Goods {
+    int32 id =1;
+    string name =2;
+    double price =3;
+}
+
+message Order {
+    int32 id =1;
+    string code =2;
+    Vendor vendor=3;
+    repeated Goods goods =4;
+}
+

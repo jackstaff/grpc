@@ -15,7 +15,7 @@ import static io.grpc.stub.ServerCalls.*;
 /**
  */
 @javax.annotation.Generated(
-    value = "by gRPC proto compiler (version 1.28.0)",
+    value = "by gRPC proto compiler (version 1.29.0)",
     comments = "Source: internal.proto")
 public final class InternalGrpc {
 
