@@ -34,6 +34,7 @@ public class MyHelloClientService {
                      System.out.println("timeout");
                     break;
                 case Status.Code.CANCELLED: //...
+                case MY_BUSINESS_ERROR_CODE://application customize error code
                 default:
                      System.out.println("errorCode:"+messageStatus.getCode()+", error:"+messageStatus.getCause());
                     break;
