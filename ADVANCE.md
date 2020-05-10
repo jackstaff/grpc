@@ -80,8 +80,11 @@ public class MyHelloService implements HelloService {
         return s->{}; //todo
     }
 
+    static final int MY_BUSINESS_ERROR_CODE = 10001;
     @Override
     public Consumer<String> bidiHello(List<String> friends, Consumer<String> replies) {
+        //pass/throw exception to client side with customize error code;
+        ((MessageStream<String>)replies).error(org.jackstaff.grpc.Status.fromCodeValue(MY_BUSINESS_ERROR_CODE));
         return s->{}; //todo
     }
     
