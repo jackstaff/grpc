@@ -32,12 +32,10 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 class TransFormInfos {
 
@@ -54,8 +52,10 @@ class TransFormInfos {
     private final Map<TypeElement, TransFormInfo> infos = new ConcurrentHashMap<>();
     private final Map<TypeElement, String> parents = new ConcurrentHashMap<>();
     private final Map<String, RegistryMapping> mappings=new ConcurrentHashMap<>();
+    private final List<ProtocolInfo> protocols;
 
-    public TransFormInfos(ProcessingEnvironment processingEnv) {
+    public TransFormInfos(ProcessingEnvironment processingEnv, List<ProtocolInfo> protocols) {
+        this.protocols = protocols;
         this.processingEnv = processingEnv;
         this.elements = processingEnv.getElementUtils();
         this.types = processingEnv.getTypeUtils();
@@ -111,14 +111,14 @@ class TransFormInfos {
 
     public TypeElement getJackstaffParent(TypeElement protoElement) {
         return jackstaffProto(parents.computeIfAbsent(protoElement, ele->{
+            List<Element> list = new ArrayList<>();
             Element parent = protoElement.getEnclosingElement();
             while (parent.getKind() == ElementKind.CLASS) {
-                if (isJackstaffProto(parent)){
-                    return parent.toString();
-                }
+                list.add(parent);
                 parent = parent.getEnclosingElement();
             }
-            return "";
+            Collections.reverse(list);
+            return list.stream().filter(this::isJackstaffProto).findFirst().map(Object::toString).orElse("");
         }));
     }
 
@@ -135,12 +135,15 @@ class TransFormInfos {
                 collect(Collectors.groupingBy(TransFormInfo::packageName));
         if (!packs.isEmpty()) {
             protos.stream().map(Utils::packageName).distinct().forEach(packName->
-                    mappings.put(packName, new RegistryMapping(processingEnv, packName, mappingClassName(packName))));
+                    mappings.put(packName, new RegistryMapping(processingEnv, protocols, mappings, packName, mappingClassName(packName))));
             packs.forEach((pack, list)->this.mappings.get(pack).build(list));
         }
     }
 
     private void prepare(TransFormInfo parent, TypeElement element) {
+        if (infos.containsKey(element) && infos.get(element).hasParent()){ //for loop references, never
+            return;
+        }
         TransFormInfo info = infos.computeIfAbsent(element, ele->new TransFormInfo(processingEnv, this, ele));
         info.setParent(parent);
         element.getEnclosedElements().stream().filter(e->e instanceof TypeElement).

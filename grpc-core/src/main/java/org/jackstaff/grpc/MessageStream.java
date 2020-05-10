@@ -116,6 +116,20 @@ public class MessageStream<T> implements Consumer<T> {
     }
 
     /**
+     * @see Status#asRuntimeException()
+     * @param status error status
+     */
+    public void error(Status status){
+        if (!isClosed()){
+            if (status.isOk()){
+                throw Status.INVALID_ARGUMENT.asRuntimeException();
+            }
+            this.status.set(status);
+            observer.onError(status.asRuntimeException());
+        }
+    }
+
+    /**
      * @see StreamObserver#onError
      * @param t throwable
      */

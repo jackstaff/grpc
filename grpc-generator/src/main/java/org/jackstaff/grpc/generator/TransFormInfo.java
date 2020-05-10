@@ -24,6 +24,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author reco@jackstaff.org
@@ -67,13 +68,17 @@ class TransFormInfo {
         return Optional.ofNullable(builder).map(TypeSpec.Builder::build).orElse(null);
     }
 
+    public boolean hasParent(){
+        return parent != null;
+    }
+
     public TransFormInfo getParent() {
         return parent;
     }
 
     public void setParent(TransFormInfo parent) {
         this.parent = parent;
-        if (parent != null){
+        if (parent != null && (protoKind == ProtoKind.MESSAGE || protoKind == ProtoKind.ENUM || protoKind == ProtoKind.ENUM_CASE)){
             parent.children.add(this);
         }
     }
@@ -146,6 +151,13 @@ class TransFormInfo {
         TransFormInfo messageV3Builder = transForms.findMessageV3Builder(messageOrBuilder);
         return Property.registryCodeBlock(selfClassName(), TypeName.get(protoElement.asType()),
                 TypeName.get(messageV3Builder.protoElement.asType()), properties);
+    }
+
+    Set<TransFormInfo> dependencies(){
+        Set<TransFormInfo> set = new HashSet<>();
+        properties.values().stream().map(Property::dependency).filter(Objects::nonNull).forEach(set::add);
+        children.stream().map(TransFormInfo::dependencies).forEach(set::addAll);
+        return set;
     }
 
     CodeBlock.Builder getRegistryCodeBlock() {

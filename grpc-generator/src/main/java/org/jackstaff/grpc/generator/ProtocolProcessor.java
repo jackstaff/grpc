@@ -53,7 +53,7 @@ public class ProtocolProcessor extends AbstractProcessor {
         List<ProtocolInfo> protocols= new ArrayList<>();
         List<MethodInfo> methods = new ArrayList<>();
         Map<String, TypeElement> grpcs = new LinkedHashMap<>();
-        TransFormInfos transForms = new TransFormInfos(this.processingEnv);
+        TransFormInfos transForms = new TransFormInfos(this.processingEnv, protocols);
         for (Element rpcMethod : roundEnv.getElementsAnnotatedWith(RpcMethod.class)) {
             String fullMethodName = getAnnotationValue(rpcMethod, "fullMethodName");
             String requestType = getAnnotationValue(rpcMethod, "requestType");
@@ -68,7 +68,7 @@ public class ProtocolProcessor extends AbstractProcessor {
         methods.stream().collect(Collectors.groupingBy(MethodInfo::serviceName)).forEach((name, methodInfos)->
                 protocols.add(new ProtocolInfo(this.processingEnv, transForms, name, grpcs.get(name), methodInfos)));
         methods.stream().flatMap(method-> Stream.of(method.requestElement(), method.responseElement())).
-                collect(Collectors.toSet()).forEach(t->transForms.put(t, new TransFormInfo(this.processingEnv, transForms, t)));
+                distinct().forEach(t->transForms.put(t, new TransFormInfo(this.processingEnv, transForms, t)));
         transForms.build();
         transForms.write();
         protocols.forEach(ProtocolInfo::build);

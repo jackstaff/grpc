@@ -6,6 +6,8 @@ import org.jackstaff.grpc.MessageStream;
 import org.jackstaff.grpc.Status;
 import org.jackstaff.grpc.annotation.Client;
 import org.jackstaff.grpc.demo.*;
+import org.jackstaff.grpc.demo.protocol.common.*;
+import org.jackstaff.grpc.demo.protocol.customer.*;
 import org.jackstaff.grpc.demo.common.interceptor.Credential;
 import org.jackstaff.grpc.demo.protocol.*;
 import org.slf4j.Logger;

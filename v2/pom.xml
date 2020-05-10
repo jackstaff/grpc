@@ -11,7 +11,7 @@
 
     <properties>
         <java.version>1.8</java.version>
-        <grpc.version>2.0.0</grpc.version>
+        <jackstaff.grpc.version>2.0.0</jackstaff.grpc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -19,7 +19,7 @@
         <dependency>
             <groupId>org.jackstaff.grpc</groupId>
             <artifactId>grpc-generator</artifactId>
-            <version>2.0.0</version>
+            <version>${jackstaff.grpc.version}</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>

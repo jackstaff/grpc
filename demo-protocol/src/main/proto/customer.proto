@@ -7,7 +7,7 @@ import "google/protobuf/timestamp.proto";
 import "common.proto";
 
 option java_multiple_files = false;
-option java_package = "org.jackstaff.grpc.demo.protocol";
+option java_package = "org.jackstaff.grpc.demo.protocol.customer";
 option java_outer_classname = "CustomerProto";
 
 service CustomerService {
@@ -38,6 +38,7 @@ message Credential {
         WEB = 1;
         MOBILE = 2;
     }
+    Id id = 6;
     string user =1;
     string password = 2;
     Entry entry = 3;

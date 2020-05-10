@@ -20,6 +20,7 @@ package org.jackstaff.grpc.generator;
 import com.google.protobuf.ByteString;
 import com.squareup.javapoet.*;
 import org.jackstaff.grpc.TransFormRegistry;
+import org.jackstaff.grpc.Transform;
 import org.jackstaff.grpc.exception.ValidationException;
 import org.jackstaff.grpc.internal.PropertyKind;
 
@@ -123,6 +124,17 @@ class Property {
             this.typeName = typeNameImp();
         }
         return typeName;
+    }
+
+    TransFormInfo dependency(){
+        switch (kind) {
+            case ENUM:
+            case MESSAGE:
+            case MESSAGE_LIST:
+            case ENUM_LIST:
+                return transForms.get(findExecutor(fGet).getReturnType());
+        }
+        return null;
     }
 
     private TypeName typeNameImp() {

@@ -3,7 +3,7 @@ package org.jackstaff.grpc.demo.service;
 import org.jackstaff.grpc.annotation.Client;
 import org.jackstaff.grpc.annotation.Server;
 import org.jackstaff.grpc.demo.*;
-import org.jackstaff.grpc.demo.protocol.CustomerService;
+import org.jackstaff.grpc.demo.protocol.customer.CustomerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

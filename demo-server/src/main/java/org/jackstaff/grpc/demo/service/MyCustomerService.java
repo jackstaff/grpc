@@ -7,6 +7,8 @@ import org.jackstaff.grpc.demo.ErrorCode;
 import org.jackstaff.grpc.demo.common.interceptor.Authorization;
 import org.jackstaff.grpc.demo.common.interceptor.LoggerInfo;
 import org.jackstaff.grpc.demo.protocol.*;
+import org.jackstaff.grpc.demo.protocol.common.*;
+import org.jackstaff.grpc.demo.protocol.customer.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

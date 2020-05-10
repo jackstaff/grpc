@@ -25,6 +25,10 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author reco@jackstaff.org
@@ -47,9 +51,18 @@ class ProtocolInfo {
         this.methods = methods;
     }
 
+    Set<TransFormInfo> dependencies(){
+        return methods.stream().flatMap(method-> Stream.of(method.requestElement(), method.responseElement())).
+                distinct().map(transForms::get).filter(Objects::nonNull).collect(Collectors.toSet());
+    }
+
     private String simpleName(){
         String name =serviceName.contains(".") ? serviceName.substring(serviceName.lastIndexOf(".")+1) : serviceName;
         return name.substring(0, 1).toUpperCase() + name.substring(1);
+    }
+
+    public String packageName(){
+        return Utils.packageName(grpc);
     }
 
     public void build(){
@@ -101,7 +114,7 @@ class ProtocolInfo {
     }
 
     public void write(){
-        Utils.write(this.processingEnv, grpc, builder);
+        Utils.write(this.processingEnv, packageName(), builder);
     }
 
 }

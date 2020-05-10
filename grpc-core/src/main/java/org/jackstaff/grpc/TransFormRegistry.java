@@ -19,6 +19,7 @@ package org.jackstaff.grpc;
 import com.google.protobuf.ByteString;
 import io.grpc.ServiceDescriptor;
 import io.grpc.stub.StreamObserver;
+import org.jackstaff.grpc.exception.ValidationException;
 import org.jackstaff.grpc.internal.PropertyKind;
 
 import java.util.*;
@@ -201,6 +202,14 @@ public class TransFormRegistry<Pojo, Proto, Builder> {
 
     public static String addProtocol(Class<?> protocol, ServiceDescriptor descriptor){
         return Transforms.addProtocol(protocol, descriptor);
+    }
+
+    public static void dependency(String registryName){
+        try {
+            Class.forName(registryName);
+        } catch (ClassNotFoundException e) {
+            throw new ValidationException("dependency registry not found.", e);
+        }
     }
 
     private static <Pojo, Proto> Transform<Pojo, Proto> getTransform(Class<?> type){
