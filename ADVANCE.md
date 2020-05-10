@@ -204,7 +204,7 @@ public interface HelloService {
 
 4. Config gRPC property in application.yml:
 ```yml
-//the time unit is second.
+//the time unit is second. defaultTimeout is mean method default grpc-timeout
 spring:
   grpc:
     server:
