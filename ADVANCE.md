@@ -1,7 +1,7 @@
 Jackstaff gRPC framework
 ====
 
-[Quick Starts](https://github.com/jackstaff/grpc/blob/master/START.md) / [Advance Usage](https://github.com/jackstaff/grpc/blob/master/ADVANCE.md) / [Road Map](https://github.com/jackstaff/grpc/blob/master/V2.md) / [Origin](https://github.com/jackstaff/grpc/blob/master/ORIGIN.md)
+[Quick Starts](https://github.com/jackstaff/grpc/blob/master/START.md) / [Advance Usage](https://github.com/jackstaff/grpc/blob/master/ADVANCE.md) / [Road MapSmooth and friendly use of gRPC](https://github.com/jackstaff/grpc/blob/master/V2.md) / [Origin](https://github.com/jackstaff/grpc/blob/master/ORIGIN.md)
 
 Advance Usage: 
 ```java
@@ -11,6 +11,7 @@ Advance Usage:
 1. Monitor status in ClientStreaming/ServerStreaming/BidirectionalStreaming:
 ```java
 //MessageStream&MessageStatus, It's another style of io.grpc.stub.StreamObserver
+//MessageStream implement Consumer,and MessageStatus adapter to StreamObserver
 //client side
 @Service
 public class MyHelloClientService {
@@ -39,8 +40,7 @@ public class MyHelloClientService {
                     
             }
         };
-        MessageStream<String> channel = new MessageStream<>(replies, Duration.ofSeconds(30));
-        helloService.lotsOfReplies(greeting, channel);
+        helloService.lotsOfReplies(greeting, new MessageStream<>(replies, Duration.ofSeconds(30)));
     }
 
 }
@@ -64,7 +64,7 @@ public class MyHelloService implements HelloService {
                 }
                 stream.accept("hi, nanoTime is: "+System.nanoTime());
                 if (i == count){
-                    stream.done();//the last one, complete/close the channel
+                    stream.done();//the last one, complete/close the stream
                 }
             }, i, TimeUnit.SECONDS);
         });
