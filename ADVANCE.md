@@ -41,7 +41,7 @@ public class MyHelloClientService {
                     
             }
         };
-        helloService.lotsOfReplies(greeting, new MessageStream<>(replies, Duration.ofSeconds(30)));
+        helloService.lotsOfReplies(greeting, new MessageStream<>(replies, Duration.ofSeconds(30)));//timeout 30 seconds
     }
 
 }
