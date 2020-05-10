@@ -27,7 +27,7 @@ import java.util.function.*;
 import java.util.stream.Collectors;
 
 /**
- *
+ * for code generator build/register POJO and Protocol java bean.
  * @author reco@jackstaff.org
  */
 public class TransFormRegistry<Pojo, Proto, Builder> {

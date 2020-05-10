@@ -40,6 +40,10 @@ public class MessageStatus<T> extends Status {
         super(Status.fromThrowable(throwable));
     }
 
+    /**
+     *
+     * @return the payload when code == Status.Code.MESSAGE
+     */
     public T getMessage() {
         return message;
     }

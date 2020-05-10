@@ -149,15 +149,26 @@ public class Status {
         }
     }
 
+    /**
+     * application customize support
+     * @return error code
+     */
     public int getCode() {
         return code;
     }
 
+    /**
+     * @return error description
+     */
     @Nullable
     public String getDescription() {
         return description;
     }
 
+    /**
+     *
+     * @return error cause
+     */
     @Nullable
     public Throwable getCause() {
         return cause;
