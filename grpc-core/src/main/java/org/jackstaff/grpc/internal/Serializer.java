@@ -16,8 +16,6 @@
 
 package org.jackstaff.grpc.internal;
 
-import com.google.protobuf.ByteString;
-import io.grpc.StatusRuntimeException;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtostuffIOUtil;
 import io.protostuff.runtime.DefaultIdStrategy;
@@ -25,6 +23,7 @@ import io.protostuff.runtime.IdStrategy;
 import io.protostuff.runtime.RuntimeSchema;
 import org.jackstaff.grpc.Packet;
 import org.jackstaff.grpc.Status;
+import org.jackstaff.grpc.TransFormRegistry;
 
 /**
  * @author reco@jackstaff.org
@@ -60,26 +59,15 @@ public class Serializer {
         }
     }
 
-    public static Packet<?> from(InternalProto.Packet proto) {
-        try {
-            return Serializer.fromBinary(proto.getData().toByteArray());
-        }catch (StatusRuntimeException ex){
-            throw ex;
-        }
-        catch (Exception ex){
-            throw Status.DATA_LOSS.withCause(ex).withDescription("from Protobuf fail").asRuntimeException();
-        }
-    }
-
-    public static InternalProto.Packet build(Packet<?> packet) {
-        try {
-            return InternalProto.Packet.newBuilder().setData(ByteString.copyFrom(Serializer.toBinary(packet))).build();
-        }catch (StatusRuntimeException ex){
-            throw ex;
-        }
-        catch (Exception ex){
-            throw Status.DATA_LOSS.withCause(ex).withDescription("build Protobuf fail").asRuntimeException();
-        }
+    @SuppressWarnings("rawtypes")
+    public static void registerPacketTransForm() {
+        TransFormRegistry<Packet, InternalProto.Packet, InternalProto.Packet.Builder> registry =
+                new TransFormRegistry<>(Packet.class, Packet::new, InternalProto.Packet.class,
+                InternalProto.Packet.Builder::build, InternalProto.Packet::newBuilder);
+        registry.bytes(t->true, Serializer::toBinary,
+                (packet, bytes) -> ProtostuffIOUtil.mergeFrom(bytes, packet, schema),
+                InternalProto.Packet::getData, InternalProto.Packet.Builder::setData);
+        registry.register();
     }
 
 }

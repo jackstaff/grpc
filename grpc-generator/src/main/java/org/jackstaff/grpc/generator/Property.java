@@ -20,7 +20,6 @@ package org.jackstaff.grpc.generator;
 import com.google.protobuf.ByteString;
 import com.squareup.javapoet.*;
 import org.jackstaff.grpc.TransFormRegistry;
-import org.jackstaff.grpc.Transform;
 import org.jackstaff.grpc.exception.ValidationException;
 import org.jackstaff.grpc.internal.PropertyKind;
 

@@ -18,7 +18,6 @@ package org.jackstaff.grpc;
 
 import com.google.protobuf.*;
 import io.grpc.ServiceDescriptor;
-import org.jackstaff.grpc.internal.InternalProto;
 import org.jackstaff.grpc.internal.Serializer;
 
 import java.util.Map;
@@ -52,7 +51,7 @@ class Transforms {
                 v->new java.sql.Timestamp(v.getSeconds()*1000+ v.getNanos()/1000000),
                 v->Timestamp.newBuilder().setSeconds(v.getTime()/1000).setNanos(v.getNanos()).build());
         addProtoTransform(java.time.Duration.class, Duration.class,
-                v->java.time.Duration.ofNanos(v.getNanos()),
+                v->java.time.Duration.ofNanos(v.getNanos()+v.getSeconds()*1000_000_000L),
                 v->Duration.newBuilder().setSeconds(v.getSeconds()).setNanos(v.getNano()).build());
     }
 
@@ -94,15 +93,17 @@ class Transforms {
                 map(tf->!Objects.equals(tf, TransformWrapper.identity)).orElse(false);
     }
 
-    @SuppressWarnings("unchecked")
     static Transform<?, ?> getPacketTransform(){
-        return Optional.ofNullable(transforms.get(Packet.class)).filter(tf->Objects.equals(tf, TransformWrapper.identity)).
-                orElseGet(()-> (Transform)addTransform(Packet.class, InternalProto.Packet.class, Serializer::from, Serializer::build));
+        if (!hasTransform(Packet.class)){
+            Serializer.registerPacketTransForm();
+        }
+        return transforms.get(Packet.class);
     }
 
     @SuppressWarnings("unchecked")
     public static <Pojo, Proto> Transform<Pojo, Proto> getTransform(Class<?> type){
         return (Transform<Pojo, Proto>)transforms.computeIfAbsent(type, k-> TransformWrapper.identity);
     }
+
 
 }

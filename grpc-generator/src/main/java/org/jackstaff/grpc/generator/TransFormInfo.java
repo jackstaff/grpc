@@ -24,7 +24,6 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * @author reco@jackstaff.org
