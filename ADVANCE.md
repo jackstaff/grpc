@@ -1,11 +1,17 @@
 Jackstaff gRPC framework
 ====
 
-[Quick Starts](https://github.com/jackstaff/grpc/blob/master/START.md) / [Advance Usage](https://github.com/jackstaff/grpc/blob/master/ADVANCE.md) / [Road Map](https://github.com/jackstaff/grpc/blob/master/V2.md) / [Origin](https://github.com/jackstaff/grpc/blob/master/ORIGIN.md)
+[Quick Starts](https://github.com/jackstaff/grpc/blob/master/START.md) / [Advance Usage](https://github.com/jackstaff/grpc/blob/master/ADVANCE.md) / [Smooth and friendly use of gRPC](https://github.com/jackstaff/grpc/blob/master/V2.md) / [Origin](https://github.com/jackstaff/grpc/blob/master/ORIGIN.md)
 
 Advance Usage: 
+```java
+
+```
+
 1. Monitor status in ClientStreaming/ServerStreaming/BidirectionalStreaming:
 ```java
+//MessageStream&MessageStatus, It's another style of io.grpc.stub.StreamObserver
+//MessageStream implement Consumer,and MessageStatus adapter to StreamObserver
 //client side
 @Service
 public class MyHelloClientService {
@@ -16,31 +22,26 @@ public class MyHelloClientService {
     public void lotsOfReplies(){
         String greeting = "hello world.";
         //it will receive timeout message if the server side not "done()" within 30 seconds
-        int timeoutSeconds = 30;
-        String timeoutMessage = new String("TIMEOUT_MESSAGE");
-        //it will receive error message if the network error/unreachable...
-        String errorMessage = new String("ERROR/EXCEPTION_MESSAGE");
-        //it will receive complete message if the server side call "done()"
-        String completeMessage = new String("COMPLETE_MESSAGE");
-        Consumer<String> replies = message->{
-            if (message == errorMessage){ // or use message.equals(errorMessage)
-                System.out.println("there are error happen");
-                return;
+        MessageStream<String> replies = new MessageStream<>(messageStatus->{
+            switch (messageStatus.getCode()) {
+                case Status.Code.MESSAGE:
+                    System.out.println("the client side receive: "+messageStatus.getMessage());
+                    break;
+                case Status.Code.COMPLETED:
+                     System.out.println("completed");
+                    break;
+                case Status.Code.DEADLINE_EXCEEDED: 
+                     System.out.println("timeout");
+                    break;
+                case Status.Code.CANCELLED: //...
+                case MY_BUSINESS_ERROR_CODE://application customize error code
+                default:
+                     System.out.println("errorCode:"+messageStatus.getCode()+", error:"+messageStatus.getCause());
+                    break;
+                    
             }
-            if (message == timeoutMessage){ // or use message.equals(timeoutMessage)
-                System.out.println("time out");
-                return;
-            }
-            if (message == completeMessage){ // or use message.equals(completeMessage)
-                System.out.println("completed");
-                return;
-            }
-            // process message
-            System.out.println("the client side receive: "+message);
         };
-        MessageChannel<String> channel = new MessageChannel<>(replies,
-                errorMessage, completeMessage, Duration.ofSeconds(timeoutSeconds), timeoutMessage);
-        helloService.lotsOfReplies(greeting, channel);
+        helloService.lotsOfReplies(greeting, new MessageStream<>(replies, Duration.ofSeconds(30)));
     }
 
 }
@@ -54,17 +55,17 @@ public class MyHelloService implements HelloService {
 
     @Override
     public void lotsOfReplies(String greeting, Consumer<String> replies) {
-        MessageChannel<String> channel = (MessageChannel<String>) replies;
+        MessageStream<String> stream = (MessageStream<String>) replies;
         final int count =100;
         IntStream.range(1, count+1).forEach(i->{
             schedule.schedule(()->{
-                if (channel.isClosed()){ //check the channel closed status
-                    System.out.println("channel closed:"+channel);
+                if (stream.isClosed()){ //check the stream  status
+                    System.out.println("stream closed:"+stream);
                     return;
                 }
-                channel.accept("hi, nanoTime is: "+System.nanoTime());
+                stream.accept("hi, nanoTime is: "+System.nanoTime());
                 if (i == count){
-                    channel.done();//the last one, complete/close the channel
+                    stream.done();//the last one, complete/close the stream
                 }
             }, i, TimeUnit.SECONDS);
         });
@@ -80,8 +81,11 @@ public class MyHelloService implements HelloService {
         return s->{}; //todo
     }
 
+    static final int MY_BUSINESS_ERROR_CODE = 10001;
     @Override
     public Consumer<String> bidiHello(List<String> friends, Consumer<String> replies) {
+        //pass/throw exception to client side with customize error code;
+        ((MessageStream<String>)replies).error(org.jackstaff.grpc.Status.fromCodeValue(MY_BUSINESS_ERROR_CODE));
         return s->{}; //todo
     }
     
@@ -113,7 +117,7 @@ public class Authorization implements Interceptor {
     @Override
     public void before(Context context) throws Exception {
         if (!validate(context, context.getMetadata("Authorization"))){
-            throw new SecurityException("NO Permission "+context.getType().getName()+":"+context.getMethod().getName());
+            throw Status.PERMISSION_DENIED.withDescription("No Permission").asRuntimeException();
         }
     }
 
@@ -177,38 +181,34 @@ public class MyHelloService implements HelloService {
 
 ```
 
-3. Asynchronous unary call:
+3. Asynchronous unary & BlockingServerStreaming call:
 ```java
 public interface HelloService {
 
     String sayHello(String greeting); //Unary RPCs
 
-    //it indicate the channel will closed after call Consumer.accept() only one times
-    //it's alias method, default + overload unary method. NOT need implements.
     @AsynchronousUnary
-    default void sayHello(String greeting, Consumer<String> reply) {
+    default void sayHello(String greeting, Consumer<String> reply){
         //reply.accept(sayHello(greeting));
-    }
-    
-    void lotsOfReplies(String greeting, Consumer<String> replies);//Server streaming RPCs
+            //it indicate the channel will closed after call Consumer.accept() only one times
+       //it's alias method, default + overload unary method. NOT need implements.
 
+    }
+
+    void lotsOfReplies(String greeting, Consumer<HelloResponse> replies);//Server streaming RPCs
+
+    @BlockingServerStreaming
+    default List<HelloResponse> lotsOfReplies(String greeting){
     //sync call server streaming,it's alias method,  default + overload ServerStreaming method. NOT need implements.
-    @UnaryServerStreaming
-    default List<String> lotsOfReplies(String greeting) {
-        /*
-        List<String> list = new ArrayList<>();
-        lotsOfReplies(greeting, list::add);
-        return list;
-        */
         return null;
     }
-    
 }
+
 ```
 
 4. Config gRPC property in application.yml:
 ```yml
-//the time unit is second.
+//the time unit is second. defaultTimeout is mean method default grpc-timeout
 spring:
   grpc:
     server:
@@ -232,5 +232,6 @@ spring:
         max-inbound-message-size: 4194304
         max-retry-attempts: 0
         idle-timeout: 1800
+        defaultTimeout: 60
 ```
 
