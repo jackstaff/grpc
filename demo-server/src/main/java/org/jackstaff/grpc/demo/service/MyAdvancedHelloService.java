@@ -10,9 +10,7 @@ import org.jackstaff.grpc.demo.common.interceptor.Authorization;
 import org.jackstaff.grpc.demo.common.interceptor.LoggerInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.origin.Origin;
 
-import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;

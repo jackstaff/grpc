@@ -215,6 +215,15 @@ public class MethodDescriptor {
         return methodType;
     }
 
+    public boolean isBlockingMethod(){
+        switch (methodType) {
+            case Unary:
+            case BlockingServerStreaming:
+                return true;
+        }
+        return false;
+    }
+
     public Class<?> getType() {
         return type;
     }

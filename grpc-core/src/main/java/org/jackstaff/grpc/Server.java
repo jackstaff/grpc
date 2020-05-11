@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
 public class Server {
 
     private final Map<String, ServerBinder<?>> binders = new ConcurrentHashMap<>();
-    private PacketServerBinder packetBinder =new PacketServerBinder();
+    private final PacketServerBinder packetBinder =new PacketServerBinder();
     private io.grpc.Server server;
 
     /**
@@ -131,87 +131,5 @@ public class Server {
             }
         });
     }
-//
-//    private Context buildContext(Packet<?> packet){
-//        String sign =HeaderMetadata.ROOT.getValue();
-//        if (sign == null || sign.isEmpty()){
-//            throw Status.INVALID_ARGUMENT.withDescription("method sign Not found:"+sign).asRuntimeException();
-//        }
-//        MethodDescriptor descriptor = methods.get(sign);
-//        if (descriptor ==null){
-//            throw Status.INVALID_ARGUMENT.withDescription("method Not found").asRuntimeException();
-//        }
-//        return new Context(descriptor, packet.unboxing(), descriptor.getBean());
-//    }
-//
-//    private void unary(Packet<?> packet, StreamObserver<Packet<?>> observer) {
-//        try {
-//            Context context = buildContext(packet);
-//            MethodDescriptor descriptor = context.getMethodDescriptor();
-//            Packet<?> result = Utils.walkThrough(context, descriptor.getInterceptors());
-//            if (result.isException()){
-//                observer.onError(Utils.throwable((Exception)result.getPayload()));
-//            }else {
-//                observer.onNext(result);
-//            }
-//        }catch (Exception ex) {
-//            observer.onError(Utils.throwable(ex));
-//        }
-//        observer.onCompleted();
-//    }
-//
-//    private void serverStreaming(Packet<?> packet, StreamObserver<Packet<?>> observer) {
-//        try {
-//            Context context = buildContext(packet);
-//            MessageStream<?> respStream = new MessageStream<>(observer);
-//            context.setStream(respStream);
-//            Packet<?> result = Utils.walkThrough(context, context.getMethodDescriptor().getInterceptors());
-//            if (result.isException()) {
-//                observer.onError(Utils.throwable((Exception)result.getPayload()));
-//            }
-//        }catch (Exception ex){
-//            observer.onError(Utils.throwable(ex));
-//            //observer.onCompleted();
-//        }
-//    }
-//
-//    private StreamObserver<Packet<?>> clientStreaming(StreamObserver<Packet<?>> observer) {
-//        try {
-//            Packet<?> packet = Serializer.fromBinary(HeaderMetadata.BINARY_ROOT.getValue());
-//            Context context = buildContext(packet);
-//            MessageChannel_X<?> respChannel = new MessageChannel_X<>(observer, packet.getCommand()).unary().ready();
-//            context.setChannel(respChannel);
-//            Packet<?> result = Utils.walkThrough(context, context.getMethodDescriptor().getInterceptors());
-//            if (!result.isException()) {
-//                MessageChannel_X<?> reqChannel = MessageChannel_X.build((Consumer<?>)result.getPayload()).ready();
-//                return new MessageObserver(reqChannel.link(respChannel));
-//            }
-//            throw (Exception) result.getPayload();
-//        }catch (Exception ex){
-//            observer.onNext(Packet.throwable(ex));
-//            observer.onCompleted();
-//            return null;
-//        }
-//    }
-//
-//    private StreamObserver<Packet<?>> bidiStreaming(StreamObserver<Packet<?>> observer) {
-//        try {
-//            Packet<?> packet =Serializer.fromBinary(HeaderMetadata.BINARY_ROOT.getValue());
-//            Context context = buildContext(packet);
-//            MessageChannel_X<?> respChannel = new MessageChannel_X<>(observer).ready();
-//            context.setChannel(respChannel);
-//            Packet<?> result = Utils.walkThrough(context, context.getMethodDescriptor().getInterceptors());
-//            if (!result.isException()) {
-//                MessageChannel_X<?> reqChannel = MessageChannel_X.build((Consumer<?>)result.getPayload()).ready();
-//                reqChannel.link(respChannel);
-//                return new MessageObserver(reqChannel);
-//            }
-//            throw (Exception) result.getPayload();
-//        }catch (Exception ex){
-//            observer.onNext(Packet.throwable(ex));
-//            observer.onCompleted();
-//            return null;
-//        }
-//    }
 
 }

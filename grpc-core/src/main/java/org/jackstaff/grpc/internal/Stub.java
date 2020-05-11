@@ -57,15 +57,7 @@ public class Stub<S extends AbstractStub<S>, ReqT, RespT> {
         this.reqTransform = descriptor.requestTransform();
         this.respTransform = descriptor.responseTransform();
         CallOptions options = CallOptions.DEFAULT.withAuthority(authority);
-        switch (descriptor.getMethodType()) {
-            case Unary:
-            case BlockingServerStreaming:
-                this.stub =(S)new BlockingStub(channel, options);
-                break;
-            default:
-                this.stub =(S)new AsyncStub(channel, options);
-                break;
-        }
+        this.stub = (S)(descriptor.isBlockingMethod() ? new BlockingStub(channel, options) : new AsyncStub(channel, options));
     }
 
     public String getAuthority() {
@@ -75,11 +67,7 @@ public class Stub<S extends AbstractStub<S>, ReqT, RespT> {
     public ManagedChannel getChannel() {
         return channel;
     }
-
-    public Duration getDefaultTimeout() {
-        return defaultTimeout;
-    }
-
+    
     public void attachDefaultDeadline() {
         attachDeadline(defaultTimeout);
     }

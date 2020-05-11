@@ -42,7 +42,7 @@ public class HeaderMetadata<T> {
 
     HeaderMetadata(Metadata.Key<T> key) {
         this.key = key;
-        this.contextKey = Context.key(JACKSTAFF);//  Context.keyWithDefault(JACKSTAFF, new Metadata());
+        this.contextKey = Context.key(JACKSTAFF);
         this.context = Context.ROOT.withValue(contextKey, new Metadata());
     }
 

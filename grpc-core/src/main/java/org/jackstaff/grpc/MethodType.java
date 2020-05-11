@@ -19,7 +19,7 @@ package org.jackstaff.grpc;
 /**
  * @author reco@jackstaff.org
  */
-public enum MethodType {
+enum MethodType {
 
     Unary,
     ClientStreaming,
@@ -29,6 +29,5 @@ public enum MethodType {
     AsynchronousUnary,
     BlockingServerStreaming,
     VoidClientStreaming;
-
 
 }
