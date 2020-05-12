@@ -17,7 +17,6 @@
 
     <properties>
         <java.version>1.8</java.version>
-        <jackstaff.grpc.version>2.0.3</jackstaff.grpc.version>
     </properties>
 
     <dependencies>
@@ -25,11 +24,6 @@
             <groupId>org.jackstaff.grpc.demo</groupId>
             <artifactId>demo-protocol</artifactId>
             <version>1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jackstaff.grpc</groupId>
-            <artifactId>grpc-spring-boot-starter</artifactId>
-            <version>${jackstaff.grpc.version}</version>
         </dependency>
 
         <dependency>

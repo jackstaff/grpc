@@ -25,7 +25,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-import java.util.logging.Logger;
 
 /**
  * @author reco@jackstaff.org
@@ -57,8 +56,6 @@ class Transforms {
 
     public static String addProtocol(Class<?> protocol, ServiceDescriptor descriptor){
         descriptors.put(protocol, descriptor);
-        Logger.getLogger(Transforms.class.getCanonicalName()).info(protocol+" protocol:"+descriptors.keySet());
-        Logger.getLogger(Transforms.class.getCanonicalName()).info("transforms.keySet:"+transforms.keySet());
         return descriptor.getName();
     }
 

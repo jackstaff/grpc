@@ -22,7 +22,7 @@ import io.grpc.stub.StreamObserver;
 import org.jackstaff.grpc.configuration.ClientConfig;
 import org.jackstaff.grpc.exception.ValidationException;
 import org.jackstaff.grpc.internal.HeaderMetadata;
-import org.jackstaff.grpc.internal.Serializer;
+import org.jackstaff.grpc.internal.InternalProto;
 import org.jackstaff.grpc.internal.Stub;
 
 import java.lang.reflect.InvocationHandler;
@@ -231,6 +231,7 @@ public class Client {
     }
 
     private Packet<?> v1StubCall(Context context, Stub<?,Packet<?>,Packet<?>> stub) {
+        Transform<Packet<?>, InternalProto.Packet> transform= Transforms.getTransform(Packet.class);
         MethodDescriptor descriptor = context.getMethodDescriptor();
         switch (descriptor.getMethodType()) {
             case Unary: {
@@ -267,7 +268,7 @@ public class Client {
             case ClientStreaming: {
                 stub.attach(HeaderMetadata.ROOT, descriptor.getSign());
                 MessageStream<?> respStream = descriptor.getStream(context.getArguments());
-                stub.attach(HeaderMetadata.BINARY_ROOT, Serializer.toBinary(Packet.boxing(context.getArguments())));
+                stub.attach(HeaderMetadata.BINARY_ROOT, transform.build(Packet.boxing(context.getArguments())).getData().toByteArray());
                 stub.attachDeadline(respStream.timeout());
                 StreamObserver<Packet<?>> reqObserver = stub.asyncClientStreaming(respStream.toPacketStreamObserver());
                 MessageStream<?> reqStream = new MessageStream<>(new MessageObserver<>(reqObserver)).link(respStream);
@@ -276,7 +277,7 @@ public class Client {
             case BidiStreaming: {
                 stub.attach(HeaderMetadata.ROOT, descriptor.getSign());
                 MessageStream<?> respStream = descriptor.getStream(context.getArguments());
-                stub.attach(HeaderMetadata.BINARY_ROOT, Serializer.toBinary(Packet.boxing(context.getArguments())));
+                stub.attach(HeaderMetadata.BINARY_ROOT, transform.build(Packet.boxing(context.getArguments())).getData().toByteArray());
                 stub.attachDeadline(respStream.timeout());
                 StreamObserver<Packet<?>> reqObserver = stub.asyncBidiStreaming(respStream.toPacketStreamObserver());
                 MessageStream<?> reqStream = new MessageStream<>(new MessageObserver<>(reqObserver)).link(respStream);

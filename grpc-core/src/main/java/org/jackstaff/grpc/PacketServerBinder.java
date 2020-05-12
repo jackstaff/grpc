@@ -16,11 +16,11 @@
 
 package org.jackstaff.grpc;
 
+import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
 import org.jackstaff.grpc.internal.HeaderMetadata;
 import org.jackstaff.grpc.internal.InternalGrpc;
 import org.jackstaff.grpc.internal.InternalProto;
-import org.jackstaff.grpc.internal.Serializer;
 
 import java.util.Arrays;
 import java.util.List;
@@ -98,7 +98,7 @@ class PacketServerBinder extends InternalGrpc.InternalImplBase {
         Transform<Packet<?>, InternalProto.Packet> transform= Transforms.getTransform(Packet.class);
         MessageStream<?> respStream = new MessageStream<>(new MessageObserver<>(transform.fromObserver(observer))).unary();
         try {
-            Packet<?> packet = Serializer.fromBinary(HeaderMetadata.BINARY_ROOT.getValue());
+            Packet<?> packet = transform.from(InternalProto.Packet.newBuilder().setData(ByteString.copyFrom(HeaderMetadata.BINARY_ROOT.getValue())).build());
             Context context = buildContext(packet).setStream(respStream);
             MethodDescriptor descriptor = context.getMethodDescriptor();
             Packet<?> result = Utils.walkThrough(context, descriptor.getInterceptors());
@@ -118,7 +118,7 @@ class PacketServerBinder extends InternalGrpc.InternalImplBase {
         Transform<Packet<?>, InternalProto.Packet> transform= Transforms.getTransform(Packet.class);
         MessageStream<?> respStream = new MessageStream<>(new MessageObserver<>(transform.fromObserver(observer)));
         try {
-            Packet<?> packet = Serializer.fromBinary(HeaderMetadata.BINARY_ROOT.getValue());
+            Packet<?> packet = transform.from(InternalProto.Packet.newBuilder().setData(ByteString.copyFrom(HeaderMetadata.BINARY_ROOT.getValue())).build());
             Context context = buildContext(packet).setStream(respStream);
             MethodDescriptor descriptor = context.getMethodDescriptor();
             Packet<?> result = Utils.walkThrough(context, descriptor.getInterceptors());

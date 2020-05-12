@@ -51,13 +51,14 @@ public class MethodDescriptor {
     private Transform requestTransform;
     private Transform responseTransform;
     private io.grpc.MethodDescriptor grpcMethod;
+    private String serviceName;
 
     public MethodDescriptor(Class<?> type, Method method) {
         this(type, method, null, null);
     }
 
     public MethodDescriptor(Class<?> type, Method method, Object bean, List<Interceptor> interceptors) {
-        this.v2 = isV2(type);
+        this.v2 = type.getAnnotation(Protocol.class) != null;
         this.type = type;
         this.method = method;
         this.bean = bean;
@@ -74,8 +75,14 @@ public class MethodDescriptor {
     }
 
     private String buildSign(){
+        try {
+            this.serviceName = (String) type.getField("SERVICE_NAME").get(null);
+        }catch (Throwable ignore){
+            this.serviceName = type.getSimpleName();
+        }
         String name = type.getName()+"/" + method.toString();
-        return UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8))+"-"+Math.abs(name.hashCode());
+        String id= UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)).toString();
+        return String.format("/%s/%s.%s", serviceName, method.getName(), id);
     }
 
     private void getTransform(){
@@ -284,11 +291,6 @@ public class MethodDescriptor {
         }
         desc.setPeer(peers.get(0));
         return desc.getPeer();
-    }
-
-
-    private static boolean isV2(Class<?> type){
-        return type.getAnnotation(Protocol.class) != null;
     }
 
     static void validateProtocol(Class<?> type, List<MethodDescriptor> descriptors){

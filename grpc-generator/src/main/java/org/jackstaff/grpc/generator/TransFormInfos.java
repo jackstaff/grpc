@@ -141,6 +141,7 @@ class TransFormInfos {
 
     private void prepare(TransFormInfo parent, TypeElement element) {
         if (infos.containsKey(element) && infos.get(element).hasParent()){ //for loop references, never
+            //warning("loop references?");
             return;
         }
         TransFormInfo info = infos.computeIfAbsent(element, ele->new TransFormInfo(processingEnv, this, ele));

@@ -20,7 +20,12 @@
             <groupId>org.jackstaff.grpc</groupId>
             <artifactId>grpc-generator</artifactId>
             <version>${jackstaff.grpc.version}</version>
-            <scope>compile</scope>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jackstaff.grpc</groupId>
+            <artifactId>grpc-spring-boot-starter</artifactId>
+            <version>${jackstaff.grpc.version}</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
         <dependency>
