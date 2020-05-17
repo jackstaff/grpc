@@ -82,7 +82,7 @@ public class MethodDescriptor {
         }
         String name = type.getName()+"/" + method.toString();
         String id= UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)).toString();
-        return String.format("/%s/%s.%s", serviceName, method.getName(), id);
+        return String.format("/%s/%s/%s", serviceName, method.getName(), id);
     }
 
     private void getTransform(){
@@ -262,7 +262,7 @@ public class MethodDescriptor {
         return interceptors;
     }
 
-    private static Map<Class<?>, Class<?>> PRIMITIVE = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Class<?>> PRIMITIVE = new ConcurrentHashMap<>();
     static {
         PRIMITIVE.put(Boolean.TYPE, Boolean.class);
         PRIMITIVE.put(Character.TYPE, Character.class);

@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2020 the original author or authors.
  *
@@ -19,19 +18,20 @@ package org.jackstaff.grpc;
 
 import com.google.common.base.Objects;
 import io.grpc.Metadata;
-import io.grpc.StatusException;
-import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import org.jackstaff.grpc.internal.HeaderMetadata;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Optional;
-import java.util.function.BiFunction;
 
 /**
  * refactor io.grpc.Status, Code replace with interface for application extends.
  * @see io.grpc.Status
+ * @see io.grpc.StatusRuntimeException
+ * @see io.grpc.StatusException
+ * @see StatusRuntimeException
+ * @see StatusException
  * @author reco@jackstaff.org
  */
 public class Status {
@@ -101,7 +101,7 @@ public class Status {
         this.cause = another.cause;
     }
 
-    private static final Metadata.Key<String> key = HeaderMetadata.stringKey("grpc-status-ext");
+    private static final Metadata.Key<String> KEY = HeaderMetadata.stringKey("grpc-status-ext");
 
     public static final Status OK = new Status(Code.OK);
     public static final Status CANCELLED = new Status(Code.CANCELLED);
@@ -123,7 +123,6 @@ public class Status {
 
     public static final Status MESSAGE = new Status(Code.MESSAGE);
     public static final Status COMPLETED = new Status(Code.COMPLETED);
-
 
     public Status withCause(Throwable cause) {
         if (Objects.equal(this.cause, cause)) {
@@ -178,15 +177,13 @@ public class Status {
         return Code.OK == code;
     }
 
-    private <T> T asError(@Nullable Metadata trailers, BiFunction<io.grpc.Status, Metadata, T> creator) {
+    static io.grpc.Status buildStatus(int code, String description, Throwable cause, Metadata trailers){
         io.grpc.Status status = io.grpc.Status.fromCodeValue(code).withDescription(description).withCause(cause);
-        if (status.getCode().value() == code) {
-            return creator.apply(status, trailers);
+        if (status.getCode().value() != code) {
+            trailers.removeAll(KEY);
+            trailers.put(KEY, Integer.toString(code));
         }
-        Metadata metadata = new Metadata();
-        metadata.put(key, Integer.toString(code));
-        Optional.ofNullable(trailers).ifPresent(metadata::merge);
-        return creator.apply(status, metadata);
+        return status;
     }
 
     public StatusRuntimeException asRuntimeException() {
@@ -194,7 +191,7 @@ public class Status {
     }
 
     public StatusRuntimeException asRuntimeException(@Nullable Metadata trailers) {
-        return asError(trailers, io.grpc.Status::asRuntimeException);
+        return new StatusRuntimeException(this, trailers);
     }
 
     public StatusException asException() {
@@ -202,7 +199,7 @@ public class Status {
     }
 
     public StatusException asException(@Nullable Metadata trailers) {
-        return asError(trailers, io.grpc.Status::asException);
+        return new StatusException(this, trailers);
     }
 
     String codeName(){
@@ -232,7 +229,7 @@ public class Status {
     }
 
     private static Status from(@Nonnull io.grpc.Status status, @Nullable Metadata trailers) {
-        int code = Optional.ofNullable(trailers).map(t->t.get(key)).
+        int code = Optional.ofNullable(trailers).map(t->t.get(KEY)).
                 filter(s->!s.isEmpty()).map(Integer::parseInt).orElseGet(status.getCode()::value);
         return new Status(code, status.getDescription(), status.getCause());
     }
@@ -252,10 +249,10 @@ public class Status {
 
     public static Metadata trailersFromThrowable(Throwable t) {
         Metadata trailers = io.grpc.Status.trailersFromThrowable(t);
-        if (trailers != null && trailers.containsKey(key)){
+        if (trailers != null && trailers.containsKey(KEY)){
             Metadata metadata = new Metadata();
             metadata.merge(trailers);
-            metadata.removeAll(key);
+            metadata.removeAll(KEY);
             return metadata;
         }
         return trailers;

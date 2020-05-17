@@ -50,7 +50,7 @@ class Transforms {
                 v->new java.sql.Timestamp(v.getSeconds()*1000+ v.getNanos()/1000000),
                 v->Timestamp.newBuilder().setSeconds(v.getTime()/1000).setNanos(v.getNanos()).build());
         addProtoTransform(java.time.Duration.class, Duration.class,
-                v->java.time.Duration.ofNanos(v.getNanos()+v.getSeconds()*1000_000_000L),
+                v->java.time.Duration.ofSeconds(v.getSeconds(), v.getNanos()),
                 v->Duration.newBuilder().setSeconds(v.getSeconds()).setNanos(v.getNano()).build());
     }
 
@@ -78,11 +78,9 @@ class Transforms {
         return builder;
     }
 
-    public static <Pojo, Proto> Transform<Pojo, Proto> addTransform(Class<Pojo> pojoClass, Class<Proto> protoClass,
+    public static <Pojo, Proto> void addTransform(Class<Pojo> pojoClass, Class<Proto> protoClass,
                                                   Function<Proto, Pojo> from, Function<Pojo, Proto> build){
-        Transform<Pojo, Proto> tf = addProtoTransform(pojoClass, protoClass, from, build);
-        transforms.put(pojoClass, tf);
-        return tf;
+        transforms.put(pojoClass, addProtoTransform(pojoClass, protoClass, from, build));
     }
 
     static boolean hasTransform(Class<?> type){
@@ -101,6 +99,5 @@ class Transforms {
     public static <Pojo, Proto> Transform<Pojo, Proto> getTransform(Class<?> type){
         return (Transform<Pojo, Proto>)transforms.computeIfAbsent(type, k-> TransformWrapper.identity);
     }
-
 
 }
