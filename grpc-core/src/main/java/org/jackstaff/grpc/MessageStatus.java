@@ -28,7 +28,7 @@ public class MessageStatus<T> extends Status {
     private T message;
 
     MessageStatus() {
-        super(Code.COMPLETED);
+        super(Code.OK);
     }
 
     MessageStatus(T message) {

@@ -110,7 +110,7 @@ public class MessageStream<T> implements Consumer<T> {
      */
     public void done(){
         if (!isClosed()){
-            status.set(Status.COMPLETED);
+            status.set(Status.OK);
             observer.onCompleted();
         }
     }

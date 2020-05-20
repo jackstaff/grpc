@@ -94,6 +94,12 @@ class RegistryMapping {
         this.addDependencies(infos);
         infos.stream().sorted((info1, info2)->{
             if (info1.getProtoKind() == info2.getProtoKind() && info1.getProtoKind() == ProtoKind.MESSAGE){
+                if (info1.isChild(info2)){
+                    return 1;
+                }
+                if (info2.isChild(info1)){
+                    return -1;
+                }
                 List<Property> props1 = info1.getProperties().values().stream().
                         filter(p->p.getKind()== PropertyKind.MESSAGE || p.getKind() == PropertyKind.MESSAGE_LIST).
                         collect(Collectors.toList());
@@ -102,6 +108,19 @@ class RegistryMapping {
                         collect(Collectors.toList());
                 if (props1.isEmpty() && props2.isEmpty()){
                     return info1.getProperties().size() - info2.getProperties().size();
+                }
+                Set<TransFormInfo> deps1= props1.stream().map(Property::dependency).filter(Objects::nonNull).collect(Collectors.toSet());
+                Set<TransFormInfo> deps2= props2.stream().map(Property::dependency).filter(Objects::nonNull).collect(Collectors.toSet());
+                if (deps1.containsAll(deps2)){
+                    return 1;
+                }
+                if (deps2.containsAll(deps1)){
+                    return -1;
+                }
+                long count1= deps1.stream().filter(deps2::contains).count();
+                long count2= deps2.stream().filter(deps1::contains).count();
+                if (count1>0 || count2>0){
+                    return (int)(count2-count1);
                 }
                 if (props1.size() == props2.size()) {
                     return info1.selfClassName().toString().length() - info2.selfClassName().toString().length();

@@ -41,6 +41,11 @@ public class Status {
      */
     public interface Code {
 
+        /**
+         * it's mapping for StreamObserver.onCompleted
+         * @see StreamObserver#onCompleted()
+         * @see MessageStatus#getCode()
+         */
         int OK = 0;//io.grpc.Status.Code.OK
         int CANCELLED = 1;//io.grpc.Status.Code.CANCELLED
         int UNKNOWN = 2;//io.grpc.Status.Code.UNKNOWN
@@ -65,12 +70,6 @@ public class Status {
          * @see MessageStatus#getMessage()
          */
         int MESSAGE = 99;
-        /**
-         * it's mapping for StreamObserver.onCompleted
-         * @see StreamObserver#onCompleted()
-         * @see MessageStatus#getCode()
-         */
-        int COMPLETED = 100;
 
         /**
          * 0..100 is reserved by rpc framework.
@@ -122,7 +121,6 @@ public class Status {
     public static final Status DATA_LOSS = new Status(Code.DATA_LOSS);
 
     public static final Status MESSAGE = new Status(Code.MESSAGE);
-    public static final Status COMPLETED = new Status(Code.COMPLETED);
 
     public Status withCause(Throwable cause) {
         if (Objects.equal(this.cause, cause)) {
@@ -222,7 +220,6 @@ public class Status {
             case Code.DATA_LOSS: return "DATA_LOSS";
             case Code.UNAUTHENTICATED: return "UNAUTHENTICATED";
             case Code.MESSAGE: return "MESSAGE";
-            case Code.COMPLETED: return "COMPLETED";
             default:
                 return String.valueOf(code);
         }

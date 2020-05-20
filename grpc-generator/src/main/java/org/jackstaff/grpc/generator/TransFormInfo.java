@@ -82,6 +82,13 @@ class TransFormInfo {
         }
     }
 
+    public boolean isChild(TransFormInfo info){
+        if (children.contains(info)){
+            return true;
+        }
+        return children.stream().anyMatch(c->c.isChild(info));
+    }
+
     public void prepare(){
         if (jackstaffParent == null){
             return;
