@@ -85,7 +85,7 @@ public class MyHelloService implements HelloService {
     @Override
     public Consumer<String> bidiHello(List<String> friends, Consumer<String> replies) {
         //pass/throw exception to client side with customize error code;
-        ((MessageStream<String>)replies).error(org.jackstaff.grpc.Status.fromCodeValue(MY_BUSINESS_ERROR_CODE));
+        ((MessageStream<String>)replies).error(new org.jackstaff.grpc.StatusRuntimeException(MY_BUSINESS_ERROR_CODE));
         return s->{}; //todo
     }
     
@@ -117,7 +117,7 @@ public class Authorization implements Interceptor {
     @Override
     public void before(Context context) throws Exception {
         if (!validate(context, context.getMetadata("Authorization"))){
-            throw Status.PERMISSION_DENIED.withDescription("No Permission").asRuntimeException();
+            throw new org.jackstaff.grpc.StatusRuntimeException(ErrorCode.PERMISSION_DENIED, context.getMethod().getName()+" No Permission");
         }
     }
 
@@ -187,7 +187,7 @@ public interface HelloService {
 
     String sayHello(String greeting); //Unary RPCs
 
-    @AsynchronousUnary
+    @RpcMethod(methodType = MethodType.ASYNCHRONOUS_UNARY)
     default void sayHello(String greeting, Consumer<String> reply){
         //reply.accept(sayHello(greeting));
             //it indicate the channel will closed after call Consumer.accept() only one times
@@ -197,7 +197,7 @@ public interface HelloService {
 
     void lotsOfReplies(String greeting, Consumer<HelloResponse> replies);//Server streaming RPCs
 
-    @BlockingServerStreaming
+    @RpcMethod(methodType = MethodType.BLOCKING_SERVER_STREAMING)
     default List<HelloResponse> lotsOfReplies(String greeting){
     //sync call server streaming,it's alias method,  default + overload ServerStreaming method. NOT need implements.
         return null;
