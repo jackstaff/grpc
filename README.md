@@ -74,7 +74,7 @@ import org.jackstaff.grpc.annotation.Client;
 @Service
 public class MyClientService {
 
-    @Client(authority = "my-server") 
+    @Client("my-server") 
     private HelloService helloService;
 
     public String sayHello(String greeting){
