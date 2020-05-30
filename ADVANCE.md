@@ -81,14 +81,22 @@ public class MyHelloService implements HelloService {
         return s->{}; //todo
     }
 
-    static final int MY_BUSINESS_ERROR_CODE = 10001;
     @Override
     public Consumer<String> bidiHello(List<String> friends, Consumer<String> replies) {
         //pass/throw exception to client side with customize error code;
-        ((MessageStream<String>)replies).error(new org.jackstaff.grpc.StatusRuntimeException(MY_BUSINESS_ERROR_CODE));
+        ((MessageStream<String>)replies).error(new org.jackstaff.grpc.StatusRuntimeException(ErrorCode.MY_BUSINESS_ERROR_CODE));
         return s->{}; //todo
     }
     
+}
+
+public interface ErrorCode extends Status.Code {
+
+    //CODE_RESERVED_RANGE_MAX==100
+
+    int MY_BUSINESS_ERROR_CODE = 1001;
+    int CODE_INVALID_ID = 1002;
+
 }
 
 ```
