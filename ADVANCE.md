@@ -27,7 +27,7 @@ public class MyHelloClientService {
                 case Status.Code.MESSAGE:
                     System.out.println("the client side receive: "+messageStatus.getMessage());
                     break;
-                case Status.Code.COMPLETED:
+                case Status.Code.OK:
                      System.out.println("completed");
                     break;
                 case Status.Code.DEADLINE_EXCEEDED: 
