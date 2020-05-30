@@ -39,22 +39,27 @@ public class MyHelloService implements HelloService {
 
     @Override
     public String sayHello(String greeting) {
-        //todo
+        return "reply greeting "+greeting;
     }
 
     @Override
     public void lotsOfReplies(String greeting, Consumer<String> replies) {
-        //todo
+        replies.accept("reply 1");
+        replies.accept("reply 2");
     }
 
     @Override
     public Consumer<String> lotsOfGreetings(List<String> friends) {
-        //todo
+        System.out.println("friends "+friends);
+        return greeting -> System.out.println("receive "+greeting);
     }
 
     @Override
     public Consumer<String> bidiHello(List<String> friends, Consumer<String> replies) {
-        //todo
+        System.out.println("friends "+friends);
+        replies.accept("hello 1");
+        replies.accept("hello 2");
+        return greeting -> System.out.println("receive "+greeting);
     }
 
 }
