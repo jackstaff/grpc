@@ -22,14 +22,14 @@ package org.jackstaff.grpc;
  * @see io.grpc.StatusException
  * @author reco@jackstaff.org
  */
+
 import io.grpc.Metadata;
-import org.jackstaff.grpc.Status;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Optional;
 
-public class StatusException extends io.grpc.StatusException {
+public final class StatusException extends io.grpc.StatusException {
 
     public StatusException(@Nonnull Throwable t) {
         this(Status.fromThrowable(t));
@@ -57,6 +57,12 @@ public class StatusException extends io.grpc.StatusException {
 
     StatusException(int code, String message, Throwable cause, @Nonnull Metadata trailers) {
         super(Status.buildStatus(code, message, cause, trailers), trailers);
+    }
+
+    @Override
+    public String getMessage() {
+        Status status = Status.fromThrowable(this);
+        return Optional.ofNullable(status.getDescription()).map(desc->status.codeName() + ": " + desc).orElseGet(status::codeName);
     }
 
 }

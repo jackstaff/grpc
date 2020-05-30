@@ -203,8 +203,7 @@ class Property {
         if (oneOfCase == null) {
             switch (kind.category()) {
                 case ENUM:
-                    spec.addStatement("return $T.ofNullable(this.$N).orElse($T.$N)",
-                            Optional.class, fieldName(), typeName(), enumNameSpecial);
+                    spec.addStatement("return this.$N != null ? this.$N : $T.$N", fieldName(), fieldName(), typeName(), enumNameSpecial);
                     break;
                 case PRIMITIVE:
                 case WRAPPER:
@@ -212,13 +211,13 @@ class Property {
                     spec.addStatement("return this.$N", fieldName());
                     break;
                 case BYTES:
-                    spec.addStatement("return $T.ofNullable(this.$N).orElseGet(()->new byte[0])", Optional.class, fieldName());
+                    spec.addStatement("return this.$N != null ? this.$N : new byte[0]", fieldName(), fieldName());
                     break;
                 case STRING:
-                    spec.addStatement("return $T.ofNullable(this.$N).orElse(\"\")", Optional.class, fieldName());
+                    spec.addStatement("return this.$N != null ? this.$N : \"\"", fieldName(), fieldName());
                     break;
                 case REPEATED:
-                    spec.addStatement("return $T.ofNullable(this.$N).orElseGet($T::emptyList)", Optional.class, fieldName(), Collections.class);
+                    spec.addStatement("return this.$N != null ? this.$N : $T.emptyList()", fieldName(), fieldName(), Collections.class);
                     break;
             }
         } else {

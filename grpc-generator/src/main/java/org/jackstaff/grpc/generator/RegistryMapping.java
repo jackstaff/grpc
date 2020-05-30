@@ -94,12 +94,6 @@ class RegistryMapping {
         this.addDependencies(infos);
         infos.stream().sorted((info1, info2)->{
             if (info1.getProtoKind() == info2.getProtoKind() && info1.getProtoKind() == ProtoKind.MESSAGE){
-                if (info1.isChild(info2)){
-                    return 1;
-                }
-                if (info2.isChild(info1)){
-                    return -1;
-                }
                 List<Property> props1 = info1.getProperties().values().stream().
                         filter(p->p.getKind()== PropertyKind.MESSAGE || p.getKind() == PropertyKind.MESSAGE_LIST).
                         collect(Collectors.toList());
@@ -120,10 +114,19 @@ class RegistryMapping {
                 long count1= deps1.stream().filter(deps2::contains).count();
                 long count2= deps2.stream().filter(deps1::contains).count();
                 if (count1>0 || count2>0){
+                    if (count1==0 || count2==0){
+                        return (int)(count2-count1);
+                    }
+                    if (info1.getProtoElement().toString().startsWith(info2.getProtoElement().toString()+".")){
+                        return -1;
+                    }
+                    if (info2.getProtoElement().toString().startsWith(info1.getProtoElement().toString()+".")){
+                        return 1;
+                    }
                     return (int)(count2-count1);
                 }
                 if (props1.size() == props2.size()) {
-                    return info1.selfClassName().toString().length() - info2.selfClassName().toString().length();
+                    return info2.getProtoElement().toString().length() - info1.getProtoElement().toString().length();
                 }
                 return props1.size() - props2.size();
             }
@@ -131,5 +134,6 @@ class RegistryMapping {
         }).map(TransFormInfo::getRegistryCodeBlock).filter(Objects::nonNull).
                 forEach(block -> builder.addStaticBlock(block.build()));
     }
+
 
 }

@@ -17,6 +17,8 @@
 package org.jackstaff.grpc.configuration;
 
 /**
+ * time unit: second
+ *
  * @author reco@jackstaff.org
  */
 public class ClientConfig {

@@ -22,9 +22,8 @@ class RegistryMapping {
         registry.register();
     }
     static {
-        TransFormRegistry<RouteNote, RouteGuideProto.RouteNote, RouteGuideProto.RouteNote.Builder> registry = new TransFormRegistry<>(RouteNote.class, RouteNote::new, RouteGuideProto.RouteNote.class, RouteGuideProto.RouteNote.Builder::build, RouteGuideProto.RouteNote::newBuilder);
-        registry.value(Point.class, RouteNote::hasLocation, RouteNote::getLocation, RouteNote::setLocation, RouteGuideProto.RouteNote::hasLocation, RouteGuideProto.RouteNote::getLocation, RouteGuideProto.RouteNote.Builder::setLocation);
-        registry.string(RouteNote::hasMessage, RouteNote::getMessage, RouteNote::setMessage, RouteGuideProto.RouteNote::getMessage, RouteGuideProto.RouteNote.Builder::setMessage);
+        TransFormRegistry<FeatureDatabase, RouteGuideProto.FeatureDatabase, RouteGuideProto.FeatureDatabase.Builder> registry = new TransFormRegistry<>(FeatureDatabase.class, FeatureDatabase::new, RouteGuideProto.FeatureDatabase.class, RouteGuideProto.FeatureDatabase.Builder::build, RouteGuideProto.FeatureDatabase::newBuilder);
+        registry.list(Feature.class, FeatureDatabase::hasFeature, FeatureDatabase::getFeature, FeatureDatabase::setFeature, RouteGuideProto.FeatureDatabase::getFeatureList, RouteGuideProto.FeatureDatabase.Builder::addAllFeature);
         registry.register();
     }
     static {
@@ -34,14 +33,15 @@ class RegistryMapping {
         registry.register();
     }
     static {
-        TransFormRegistry<Feature, RouteGuideProto.Feature, RouteGuideProto.Feature.Builder> registry = new TransFormRegistry<>(Feature.class, Feature::new, RouteGuideProto.Feature.class, RouteGuideProto.Feature.Builder::build, RouteGuideProto.Feature::newBuilder);
-        registry.string(Feature::hasName, Feature::getName, Feature::setName, RouteGuideProto.Feature::getName, RouteGuideProto.Feature.Builder::setName);
-        registry.value(Point.class, Feature::hasLocation, Feature::getLocation, Feature::setLocation, RouteGuideProto.Feature::hasLocation, RouteGuideProto.Feature::getLocation, RouteGuideProto.Feature.Builder::setLocation);
+        TransFormRegistry<RouteNote, RouteGuideProto.RouteNote, RouteGuideProto.RouteNote.Builder> registry = new TransFormRegistry<>(RouteNote.class, RouteNote::new, RouteGuideProto.RouteNote.class, RouteGuideProto.RouteNote.Builder::build, RouteGuideProto.RouteNote::newBuilder);
+        registry.value(Point.class, RouteNote::hasLocation, RouteNote::getLocation, RouteNote::setLocation, RouteGuideProto.RouteNote::hasLocation, RouteGuideProto.RouteNote::getLocation, RouteGuideProto.RouteNote.Builder::setLocation);
+        registry.string(RouteNote::hasMessage, RouteNote::getMessage, RouteNote::setMessage, RouteGuideProto.RouteNote::getMessage, RouteGuideProto.RouteNote.Builder::setMessage);
         registry.register();
     }
     static {
-        TransFormRegistry<FeatureDatabase, RouteGuideProto.FeatureDatabase, RouteGuideProto.FeatureDatabase.Builder> registry = new TransFormRegistry<>(FeatureDatabase.class, FeatureDatabase::new, RouteGuideProto.FeatureDatabase.class, RouteGuideProto.FeatureDatabase.Builder::build, RouteGuideProto.FeatureDatabase::newBuilder);
-        registry.list(Feature.class, FeatureDatabase::hasFeature, FeatureDatabase::getFeature, FeatureDatabase::setFeature, RouteGuideProto.FeatureDatabase::getFeatureList, RouteGuideProto.FeatureDatabase.Builder::addAllFeature);
+        TransFormRegistry<Feature, RouteGuideProto.Feature, RouteGuideProto.Feature.Builder> registry = new TransFormRegistry<>(Feature.class, Feature::new, RouteGuideProto.Feature.class, RouteGuideProto.Feature.Builder::build, RouteGuideProto.Feature::newBuilder);
+        registry.string(Feature::hasName, Feature::getName, Feature::setName, RouteGuideProto.Feature::getName, RouteGuideProto.Feature.Builder::setName);
+        registry.value(Point.class, Feature::hasLocation, Feature::getLocation, Feature::setLocation, RouteGuideProto.Feature::hasLocation, RouteGuideProto.Feature::getLocation, RouteGuideProto.Feature.Builder::setLocation);
         registry.register();
     }
 

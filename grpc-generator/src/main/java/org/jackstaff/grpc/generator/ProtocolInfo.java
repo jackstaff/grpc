@@ -16,12 +16,16 @@
 
 package org.jackstaff.grpc.generator;
 
+import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeSpec;
+import org.jackstaff.grpc.MethodType;
 import org.jackstaff.grpc.annotation.*;
 
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import java.util.List;
@@ -72,19 +76,19 @@ class ProtocolInfo {
             MethodSpec.Builder spec = MethodSpec.methodBuilder(method.getMethodName()).addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT);
             switch (method.getMethodType()){
                 case UNARY:
-//                    spec.addAnnotation(Unary.class);
+                    spec.addAnnotation(AnnotationSpec.builder(RpcMethod.class).addMember("methodType", "$T.UNARY", MethodType.class).build());
                     spec.returns(method.response() ).addParameter(Utils.parameter(method.request()));
                     break;
                 case SERVER_STREAMING:
-                    spec.addAnnotation(ServerStreaming.class);
+                    spec.addAnnotation(AnnotationSpec.builder(RpcMethod.class).addMember("methodType", "$T.SERVER_STREAMING", MethodType.class).build());
                     spec.addParameter(Utils.parameter(method.request())).addParameter(Utils.responseParameter(method));
                     break;
                 case CLIENT_STREAMING:
-                    spec.addAnnotation(ClientStreaming.class);
+                    spec.addAnnotation(AnnotationSpec.builder(RpcMethod.class).addMember("methodType", "$T.CLIENT_STREAMING", MethodType.class).build());
                     spec.returns(Utils.consumerTypeName(method.request())).addParameter(Utils.responseParameter(method));
                     break;
                 case BIDI_STREAMING:
-                    spec.addAnnotation(BidiStreaming.class);
+                    spec.addAnnotation(AnnotationSpec.builder(RpcMethod.class).addMember("methodType", "$T.BIDI_STREAMING", MethodType.class).build());
                     spec.returns(Utils.consumerTypeName(method.request())).addParameter(Utils.responseParameter(method));
                     break;
             }
@@ -92,25 +96,28 @@ class ProtocolInfo {
             MethodSpec.Builder peer = MethodSpec.methodBuilder(method.getMethodName()).addModifiers(Modifier.PUBLIC, Modifier.DEFAULT);
             switch (method.getMethodType()) {
                 case UNARY:
-                    peer.addAnnotation(AsynchronousUnary.class);
-                    peer.addComment("AsynchronousUnary for overload "+method.getMethodName()+". do NOT implement it.").
-                            addParameter(Utils.parameter(method.request())).addParameter(Utils.responseParameter(method));
+                    peer.addAnnotation(AnnotationSpec.builder(RpcMethod.class).addMember("methodType", "$T.ASYNCHRONOUS_UNARY", MethodType.class).build());
+                    peer.addParameter(Utils.parameter(method.request())).addParameter(Utils.responseParameter(method)).
+                            addStatement("throw new $T(\"Do NOT implement it.\")", RuntimeException.class);
                     break;
                 case SERVER_STREAMING:
-                    peer.addAnnotation(BlockingServerStreaming.class);
-                    peer.addComment("BlockingServerStreaming for overload "+method.getMethodName()+". do NOT implement it.").
-                            returns(Utils.listTypeName(method.response())).addParameter(Utils.parameter(method.request())).addStatement("return null");
+                    peer.addAnnotation(AnnotationSpec.builder(RpcMethod.class).addMember("methodType", "$T.BLOCKING_SERVER_STREAMING", MethodType.class).build());
+                    peer.returns(Utils.listTypeName(method.response())).addParameter(Utils.parameter(method.request())).
+                            addStatement("throw new $T(\"Do NOT implement it.\")", RuntimeException.class);
                     break;
                 default:
                     continue;
             }
             builder.addMethod(peer.build());
         }
-        builder.addField(FieldSpec.builder(String.class, "SERVICE_NAME")
-                .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
-                .initializer("$T.addProtocol($N.class, $T.getServiceDescriptor())",
-                        transForms.findRegistry(Utils.packageName(grpc)), simpleName(), grpc.asType())
-                .build());
+        grpc.getEnclosedElements().stream().filter(t->t.getKind()== ElementKind.METHOD).map(Element::getSimpleName).
+                filter(name->"getServiceDescriptor".equals(name.toString())).findAny().ifPresent(name->{
+            builder.addField(FieldSpec.builder(String.class, "SERVICE_NAME")
+                    .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
+                    .initializer("$T.addProtocol($N.class, $T.$N())",
+                            transForms.findRegistry(Utils.packageName(grpc)), simpleName(), grpc.asType(), name)
+                    .build());
+        });
     }
 
     public void write(){

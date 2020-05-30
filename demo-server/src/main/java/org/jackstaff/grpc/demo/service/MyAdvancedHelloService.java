@@ -1,11 +1,9 @@
 package org.jackstaff.grpc.demo.service;
 
 import org.jackstaff.grpc.MessageStream;
+import org.jackstaff.grpc.StatusRuntimeException;
 import org.jackstaff.grpc.annotation.Server;
-import org.jackstaff.grpc.demo.AdvancedHelloService;
-import org.jackstaff.grpc.demo.HelloRequest;
-import org.jackstaff.grpc.demo.HelloResponse;
-import org.jackstaff.grpc.demo.SocialInfo;
+import org.jackstaff.grpc.demo.*;
 import org.jackstaff.grpc.demo.common.interceptor.Authorization;
 import org.jackstaff.grpc.demo.common.interceptor.LoggerInfo;
 import org.slf4j.Logger;
@@ -22,6 +20,11 @@ public class MyAdvancedHelloService implements AdvancedHelloService {
 
     Logger logger = LoggerFactory.getLogger(MyAdvancedHelloService.class);
     ScheduledExecutorService schedule = Executors.newScheduledThreadPool(2);
+
+    @Override
+    public void procedure(String msg) {
+        logger.info("the void procedure.."+msg);
+    }
 
     @Override
     public String deny(String message) {

@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 /**
- * MessageStream implements the Consumer which for (Client/Server/Bidi) Streaming.
+ * MessageStream implements the Consumer which for (Client/Server/Bidi/AsyncUnary) Streaming.
  * It's another style of StreamObserver
  * @see io.grpc.stub.StreamObserver
  * @see MessageStatus

@@ -43,10 +43,6 @@ class PacketServerBinder extends InternalGrpc.InternalImplBase {
         descriptors.forEach(info -> methods.put(info.getSign(), info));
     }
 
-    public boolean hasBinder(){
-        return !methods.isEmpty();
-    }
-
     private Context buildContext(Packet<?> packet){
         String sign = HeaderMetadata.ROOT.getValue();
         if (sign == null || sign.isEmpty()){

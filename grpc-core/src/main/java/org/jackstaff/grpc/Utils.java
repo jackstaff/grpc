@@ -18,6 +18,7 @@ package org.jackstaff.grpc;
 
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
+import org.jackstaff.grpc.annotation.Protocol;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.InvocationTargetException;
@@ -86,11 +87,8 @@ class Utils {
     }
 
     static Throwable throwable(Throwable ex){
-        if (ex instanceof StatusRuntimeException){
-            return ex;
-        }
-        if (ex instanceof StatusException){
-            return Status.fromThrowable(ex).asRuntimeException(((StatusException) ex).getTrailers());
+        if (ex instanceof io.grpc.StatusException){
+            return Status.fromThrowable(ex).asException(((io.grpc.StatusException) ex).getTrailers());
         }
         return Status.fromThrowable(ex).asRuntimeException();
     }
@@ -103,6 +101,10 @@ class Utils {
             }
             return buf.append(s).toString();
         }).orElse("");
+    }
+
+    static boolean isV2(Class<?> type){
+        return type.getAnnotation(Protocol.class) != null;
     }
 
 }

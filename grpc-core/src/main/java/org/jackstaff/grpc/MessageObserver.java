@@ -52,7 +52,7 @@ class MessageObserver<T> implements StreamObserver<T>, Original<StreamObserver<?
 
     @Override
     public void onError(Throwable t) {
-        this.onError.accept(t);
+        this.onError.accept(Utils.throwable(t));
     }
 
     @Override

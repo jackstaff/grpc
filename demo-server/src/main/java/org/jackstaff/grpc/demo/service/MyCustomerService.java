@@ -2,6 +2,7 @@ package org.jackstaff.grpc.demo.service;
 
 import org.jackstaff.grpc.MessageStream;
 import org.jackstaff.grpc.Status;
+import org.jackstaff.grpc.StatusRuntimeException;
 import org.jackstaff.grpc.annotation.Server;
 import org.jackstaff.grpc.demo.ErrorCode;
 import org.jackstaff.grpc.demo.common.interceptor.Authorization;
@@ -47,8 +48,8 @@ public class MyCustomerService implements CustomerService {
                 }
             }
         }
-        ((MessageStream<Customer>)customerResponse).error(
-                Status.fromCodeValue(ErrorCode.CODE_BAD_GREETING).withDescription("greeting no message").asRuntimeException());
+        throw new StatusRuntimeException(ErrorCode.CODE_BAD_GREETING,"greeting no message");
+        //same as ((MessageStream<Customer>)customerResponse).error(new StatusRuntimeException(ErrorCode.CODE_BAD_GREETING,"greeting no message"));
     }
 
     @Override
@@ -94,7 +95,7 @@ public class MyCustomerService implements CustomerService {
     public DataModel getDataModel(Id id) {
         if (id.getId() < 0){
             logger.info("getDataModel id.getId() < 0  will throw exception: CODE_INVALID_ID");
-            throw Status.fromCodeValue(ErrorCode.CODE_INVALID_ID).withDescription("invalid id:"+id.getId()).asRuntimeException();
+            throw new StatusRuntimeException(ErrorCode.CODE_INVALID_ID,"invalid id:"+id.getId());
         }
         DataModel dm = new DataModel();
 

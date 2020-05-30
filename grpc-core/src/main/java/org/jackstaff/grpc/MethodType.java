@@ -19,15 +19,35 @@ package org.jackstaff.grpc;
 /**
  * @author reco@jackstaff.org
  */
-enum MethodType {
+public enum MethodType {
 
-    Unary,
-    ClientStreaming,
-    ServerStreaming,
-    BidiStreaming,
+    UNARY,
+    CLIENT_STREAMING,
+    SERVER_STREAMING,
+    BIDI_STREAMING,
 
-    AsynchronousUnary,
-    BlockingServerStreaming,
-    VoidClientStreaming;
+    /**
+     * it indicate the unary method will call as asynchronous.
+     * it's alias method, default + overload unary method
+     *  <pre> {@code
+     *     public interface Hello {
+     *
+     *         int sayHi(String greeting);
+     *
+     *         //ASYNCHRONOUS_UNARY
+     *         default void sayHi(String greeting, Consumer<Integer> reply) {
+     *             //it's always equals: "reply.accept(sayHi(greeting));". AUTOMATICALLY.
+     *         }
+     *
+     *     }
+     * }</pre>
+     *
+     */
+    ASYNCHRONOUS_UNARY,
+    /**
+     * it indicate the ServerStreaming method will call as unary and synchronous.
+     * it's alias method,  default + overload ServerStreaming method
+     */
+    BLOCKING_SERVER_STREAMING;
 
 }

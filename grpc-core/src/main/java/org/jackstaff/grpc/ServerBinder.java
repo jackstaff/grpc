@@ -43,7 +43,7 @@ class ServerBinder<T> implements BindableService {
         this.serviceDescriptor = Transforms.getServiceDescriptor(type);
         List<MethodDescriptor> methods = Arrays.stream(type.getMethods()).map(method -> new MethodDescriptor(type, method, target, interceptors)).collect(Collectors.toList());
         MethodDescriptor.validateProtocol(type, methods);
-        Set<MethodType> types = new HashSet<>(Arrays.asList(MethodType.Unary, MethodType.ClientStreaming, MethodType.ServerStreaming, MethodType.BidiStreaming));
+        Set<MethodType> types = new HashSet<>(Arrays.asList(MethodType.UNARY, MethodType.CLIENT_STREAMING, MethodType.SERVER_STREAMING, MethodType.BIDI_STREAMING));
         this.descriptors = methods.stream().filter(desc->types.contains(desc.getMethodType())).
                 collect(HashMap::new, (m,d)->m.put(d.getMethod().getName(), d), HashMap::putAll);
     }
@@ -60,16 +60,16 @@ class ServerBinder<T> implements BindableService {
             String methodName = name.substring(0,1).toLowerCase()+ name.substring(1);
             MethodDescriptor info = descriptors.get(methodName);
             switch (info.getMethodType()){
-                case Unary:
+                case UNARY:
                     builder.addMethod(desc, asyncUnaryCall(new MethodHandler<>(info)));
                     break;
-                case ServerStreaming:
+                case SERVER_STREAMING:
                     builder.addMethod(desc, asyncServerStreamingCall(new MethodHandler<>(info)));
                     break;
-                case ClientStreaming:
+                case CLIENT_STREAMING:
                     builder.addMethod(desc, asyncClientStreamingCall(new MethodHandler<>(info)));
                     break;
-                case BidiStreaming:
+                case BIDI_STREAMING:
                     builder.addMethod(desc, asyncBidiStreamingCall(new MethodHandler<>(info)));
                     break;
             }
@@ -96,7 +96,7 @@ class ServerBinder<T> implements BindableService {
         @SuppressWarnings("unchecked")
         public void invoke(Req request, StreamObserver<Resp> observer) {
             switch (descriptor.getMethodType()){
-                case Unary:
+                case UNARY:
                     try {
                         Object[] args = new Object[]{reqTransform.from(request)};
                         Context context = new Context(descriptor, args, descriptor.getBean());
@@ -111,7 +111,7 @@ class ServerBinder<T> implements BindableService {
                         observer.onError(Utils.throwable(ex));
                     }
                     break;
-                case ServerStreaming:
+                case SERVER_STREAMING:
                     MessageStream<?> respStream = new MessageStream<>(respTransform.fromObserver(observer));
                     try {
                         Object[] args = new Object[]{reqTransform.from(request), respStream};
@@ -130,11 +130,11 @@ class ServerBinder<T> implements BindableService {
         @SuppressWarnings("unchecked")
         public StreamObserver<Req> invoke(StreamObserver<Resp> observer) {
             switch (descriptor.getMethodType()){
-                case ClientStreaming:
-                case BidiStreaming:
+                case CLIENT_STREAMING:
+                case BIDI_STREAMING:
                     MessageStream<?> respStream = new MessageStream<>(respTransform.fromObserver(observer));
                     try {
-                        if (descriptor.getMethodType() == MethodType.ClientStreaming){
+                        if (descriptor.getMethodType() == MethodType.CLIENT_STREAMING){
                             respStream.unary();
                         }
                         Context context = new Context(descriptor, new Object[]{respStream}, descriptor.getBean());

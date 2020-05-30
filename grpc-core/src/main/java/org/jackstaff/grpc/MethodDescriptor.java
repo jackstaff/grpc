@@ -16,12 +16,11 @@
 
 package org.jackstaff.grpc;
 
-import org.jackstaff.grpc.annotation.*;
+import org.jackstaff.grpc.annotation.RpcMethod;
 import org.jackstaff.grpc.exception.ValidationException;
 import org.jackstaff.grpc.internal.InternalGrpc;
 
 import javax.annotation.Nonnull;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -58,12 +57,12 @@ public class MethodDescriptor {
     }
 
     public MethodDescriptor(Class<?> type, Method method, Object bean, List<Interceptor> interceptors) {
-        this.v2 = type.getAnnotation(Protocol.class) != null;
+        this.v2 = Utils.isV2(type);
         this.type = type;
         this.method = method;
         this.bean = bean;
         this.interceptors = interceptors;
-        this.annotationType = getAnnotationMethodType(method);
+        this.annotationType = Optional.ofNullable(method.getAnnotation(RpcMethod.class)).map(RpcMethod::methodType).orElse(null);
         this.methodType = checkMethodType(annotationType);
         if (annotationType != null && annotationType != this.methodType){
             throw new ValidationException(method + " annotation invalid for "+ methodType+"/"+annotationType);
@@ -92,32 +91,25 @@ public class MethodDescriptor {
             return;
         }
         switch (this.methodType){
-            case Unary:
+            case UNARY:
                 this.requestTransform = Transforms.getTransform(method.getParameterTypes()[0]);
                 this.responseTransform = Transforms.getTransform(method.getReturnType());
                 break;
-            case BlockingServerStreaming:
+            case BLOCKING_SERVER_STREAMING:
                 //it's default + overload
                 this.requestTransform = Transforms.getTransform(method.getParameterTypes()[0]);
                 this.responseTransform = Transforms.getTransform(genericReturnType(method));
                 break;
-            case AsynchronousUnary:
+            case ASYNCHRONOUS_UNARY:
                 //it's default,will call peer method (unary), transform same as server streaming.
-            case ServerStreaming:
+            case SERVER_STREAMING:
                 this.requestTransform = Transforms.getTransform(method.getParameterTypes()[0]);
                 this.responseTransform = Transforms.getTransform(genericParameter(method, 1));
                 break;
-            case ClientStreaming:
-            case BidiStreaming:
+            case CLIENT_STREAMING:
+            case BIDI_STREAMING:
                 this.requestTransform = Transforms.getTransform(genericReturnType(method));
                 this.responseTransform = Transforms.getTransform(genericParameter(method, 0));
-                break;
-            case VoidClientStreaming:
-                //NEVER HAPPEN
-                this.requestTransform = Transforms.getTransform(genericReturnType(method));
-                this.responseTransform = Transforms.getTransform(Void.TYPE);
-                break;
-            default:
                 break;
         }
     }
@@ -129,16 +121,15 @@ public class MethodDescriptor {
                     findAny().orElse(null);
         }
         switch (this.methodType){
-            case AsynchronousUnary:
-            case Unary:
+            case ASYNCHRONOUS_UNARY:
+            case UNARY:
                 return InternalGrpc.getUnaryMethod();
-            case BlockingServerStreaming:
-            case ServerStreaming:
+            case BLOCKING_SERVER_STREAMING:
+            case SERVER_STREAMING:
                 return InternalGrpc.getServerStreamingMethod();
-            case VoidClientStreaming:
-            case ClientStreaming:
+            case CLIENT_STREAMING:
                 return InternalGrpc.getClientStreamingMethod();
-            case BidiStreaming:
+            case BIDI_STREAMING:
                 return InternalGrpc.getBidiStreamingMethod();
             default:
                 return null;
@@ -154,31 +145,31 @@ public class MethodDescriptor {
         switch ((int) Arrays.stream(method.getParameterTypes()).filter(Consumer.class::equals).count()){
             case 0:
                 if (Consumer.class.equals(method.getReturnType())) {
-                    return MethodType.VoidClientStreaming;
+                    return MethodType.CLIENT_STREAMING;
                 }
-                if (annotationType == MethodType.BlockingServerStreaming || (v2 && method.isDefault())){
-                    return MethodType.BlockingServerStreaming;
+                if (annotationType == MethodType.BLOCKING_SERVER_STREAMING || (v2 && method.isDefault())){
+                    return MethodType.BLOCKING_SERVER_STREAMING;
                 }
-                return MethodType.Unary;
+                return MethodType.UNARY;
             case 1:
                 Class<?>[] types = method.getParameterTypes();
                 if (!types[types.length-1].equals(Consumer.class)){
                     throw new ValidationException(method+" Consumer must be LAST parameter");
                 }
                 if (method.getReturnType().equals(Void.TYPE)) {
-                    if (annotationType ==MethodType.AsynchronousUnary || (v2 && method.isDefault())){
-                        return MethodType.AsynchronousUnary;
+                    if (annotationType ==MethodType.ASYNCHRONOUS_UNARY || (v2 && method.isDefault())){
+                        return MethodType.ASYNCHRONOUS_UNARY;
                     }
-                    return MethodType.ServerStreaming;
+                    return MethodType.SERVER_STREAMING;
                 }
                 if (Consumer.class.equals(method.getReturnType())) {
                     if (annotationType != null){
-                        if (annotationType != MethodType.ClientStreaming && annotationType != MethodType.BidiStreaming){
+                        if (annotationType != MethodType.CLIENT_STREAMING && annotationType != MethodType.BIDI_STREAMING){
                             throw new ValidationException(method + " invalid annotation type");
                         }
                         return annotationType;
                     }
-                    return MethodType.BidiStreaming;
+                    return MethodType.BIDI_STREAMING;
 
                     //return Optional.ofNullable(annotationType).map(r-> MethodType.ClientStreaming).orElse(MethodType.BidiStreaming);
                 }
@@ -224,8 +215,8 @@ public class MethodDescriptor {
 
     public boolean isBlockingMethod(){
         switch (methodType) {
-            case Unary:
-            case BlockingServerStreaming:
+            case UNARY:
+            case BLOCKING_SERVER_STREAMING:
                 return true;
         }
         return false;
@@ -298,8 +289,8 @@ public class MethodDescriptor {
             throw new ValidationException("invalid type "+type.getName() +" MUST be interface");
         }
         for (MethodDescriptor desc: descriptors){
-            if (desc.getMethodType() == MethodType.AsynchronousUnary){
-                MethodDescriptor peer = findPeer(descriptors, desc, MethodType.Unary);
+            if (desc.getMethodType() == MethodType.ASYNCHRONOUS_UNARY){
+                MethodDescriptor peer = findPeer(descriptors, desc, MethodType.UNARY);
                 Method unary = peer.getMethod();
                 Method async = desc.getMethod();
                 Class<?>[] uTypes = unary.getParameterTypes();
@@ -318,8 +309,8 @@ public class MethodDescriptor {
                 }
                 throw new ValidationException(desc.getMethod()+"@AsynchronousUnary peer method argument not match.");
             }
-            if (desc.getMethodType() == MethodType.BlockingServerStreaming){
-                MethodDescriptor peer = findPeer(descriptors, desc, MethodType.ServerStreaming);
+            if (desc.getMethodType() == MethodType.BLOCKING_SERVER_STREAMING){
+                MethodDescriptor peer = findPeer(descriptors, desc, MethodType.SERVER_STREAMING);
                 Method ss = peer.getMethod();
                 Method uss = desc.getMethod();
                 Class<?>[] ssTypes = ss.getParameterTypes();
@@ -339,8 +330,8 @@ public class MethodDescriptor {
                 }
                 throw new ValidationException(desc.getMethod()+"@UnaryServerStreaming peer method argument not match.");
             }
-            Set<MethodType> types = new HashSet<>(Arrays.asList(MethodType.Unary, MethodType.ClientStreaming,
-                    MethodType.ServerStreaming, MethodType.BidiStreaming, MethodType.VoidClientStreaming));
+            Set<MethodType> types = new HashSet<>(Arrays.asList(MethodType.UNARY, MethodType.CLIENT_STREAMING,
+                    MethodType.SERVER_STREAMING, MethodType.BIDI_STREAMING));
             if (descriptors.stream().anyMatch(d->d != desc && types.contains(d.methodType) &&
                     d.getMethod().getName().equalsIgnoreCase(desc.getMethod().getName()))){
                 throw new ValidationException(desc.getMethod()+" duplicate name conflict.");
@@ -364,23 +355,6 @@ public class MethodDescriptor {
             }
         }
         return null;
-    }
-
-    private static final Set<Class<? extends Annotation>> ANNOTATIONS = new HashSet<>(Arrays.asList(
-            Unary.class, ClientStreaming.class, ServerStreaming.class, BidiStreaming.class,
-            AsynchronousUnary.class, BlockingServerStreaming.class, VoidClientStreaming.class));
-
-    private static MethodType getAnnotationMethodType(Method method){
-        List<Annotation> anns = Arrays.stream(method.getDeclaredAnnotations()).
-                filter(a->ANNOTATIONS.contains(a.annotationType())).collect(Collectors.toList());
-        switch (anns.size()){
-            case 0:
-                return null;
-            case 1:
-                return MethodType.valueOf(anns.get(0).annotationType().getSimpleName());
-            default:
-                throw new ValidationException(method+" duplicate methodType Annotation");
-        }
     }
 
 }

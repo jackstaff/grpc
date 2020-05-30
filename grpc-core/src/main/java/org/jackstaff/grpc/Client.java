@@ -189,36 +189,36 @@ public class Client {
         MethodDescriptor descriptor = context.getMethodDescriptor();
         Object[] args = context.getArguments();
         switch (descriptor.getMethodType()) {
-            case Unary: {
+            case UNARY: {
                 stub.attachDefaultDeadline();
                 return Packet.ok(stub.blockingUnary((ReqT) args[0]));
             }
-            case AsynchronousUnary: {
+            case ASYNCHRONOUS_UNARY: {
                 MessageStream<RespT> respStream = MessageStream.build((Consumer<RespT>) args[1]).unary();
                 stub.attachDeadline(respStream.timeout());
                 stub.asyncUnary((ReqT)args[0], respStream.toStreamObserver());
                 return new Packet<>();
             }
-            case BlockingServerStreaming: {
+            case BLOCKING_SERVER_STREAMING: {
                 List<RespT> list = new ArrayList<>();
                 stub.attachDefaultDeadline();
                 stub.blockingServerStreaming((ReqT)args[0]).forEachRemaining(list::add);
                 return Packet.ok(list);
             }
-            case ServerStreaming: {
+            case SERVER_STREAMING: {
                 MessageStream<RespT> respStream = MessageStream.build((Consumer<RespT>) args[1]);
                 stub.attachDeadline(respStream.timeout());
                 stub.asyncServerStreaming((ReqT)args[0], respStream.toStreamObserver());
                 return new Packet<>();
             }
-            case ClientStreaming: {
+            case CLIENT_STREAMING: {
                 MessageStream<RespT> respStream = MessageStream.build((Consumer<RespT>) args[0]).unary();
                 stub.attachDeadline(respStream.timeout());
                 StreamObserver<ReqT> reqObserver = stub.asyncClientStreaming(respStream.toStreamObserver());
                 MessageStream<ReqT> reqStream = new MessageStream<>(reqObserver).link(respStream);
                 return Packet.ok(reqStream);
             }
-            case BidiStreaming: {
+            case BIDI_STREAMING: {
                 MessageStream<RespT> respStream = MessageStream.build((Consumer<RespT>) args[0]);
                 stub.attachDeadline(respStream.timeout());
                 StreamObserver<ReqT> reqObserver = stub.asyncBidiStreaming(respStream.toStreamObserver());
@@ -234,12 +234,12 @@ public class Client {
         Transform<Packet<?>, InternalProto.Packet> transform= Transforms.getTransform(Packet.class);
         MethodDescriptor descriptor = context.getMethodDescriptor();
         switch (descriptor.getMethodType()) {
-            case Unary: {
+            case UNARY: {
                 stub.attach(HeaderMetadata.ROOT, descriptor.getSign());
                 stub.attachDefaultDeadline();
                 return stub.blockingUnary(Packet.boxing(context.getArguments()));
             }
-            case AsynchronousUnary: {
+            case ASYNCHRONOUS_UNARY: {
                 MethodDescriptor peer = descriptor.getPeer();
                 stub.attach(HeaderMetadata.ROOT, peer.getSign());
                 Object[] args = Arrays.copyOf(context.getArguments(), peer.getMethod().getParameterCount()); //-1
@@ -248,7 +248,7 @@ public class Client {
                 stub.asyncUnary(Packet.boxing(args), respStream.toPacketStreamObserver());
                 return new Packet<>();
             }
-            case BlockingServerStreaming: {
+            case BLOCKING_SERVER_STREAMING: {
                 MethodDescriptor peer = descriptor.getPeer();
                 Object[] args = Arrays.copyOf(context.getArguments(), peer.getMethod().getParameterCount()); //+1
                 stub.attach(HeaderMetadata.ROOT, peer.getSign());
@@ -257,15 +257,14 @@ public class Client {
                 stub.blockingServerStreaming(Packet.boxing(args)).forEachRemaining(v->list.add(v.getPayload()));
                 return Packet.ok(list);
             }
-            case ServerStreaming: {
+            case SERVER_STREAMING: {
                 stub.attach(HeaderMetadata.ROOT, descriptor.getSign());
                 MessageStream<?> respStream = descriptor.getStream(context.getArguments());
                 stub.attachDeadline(respStream.timeout());
                 stub.asyncServerStreaming(Packet.boxing(context.getArguments()), respStream.toPacketStreamObserver());
                 return new Packet<>();
             }
-            case VoidClientStreaming:
-            case ClientStreaming: {
+            case CLIENT_STREAMING: {
                 stub.attach(HeaderMetadata.ROOT, descriptor.getSign());
                 MessageStream<?> respStream = descriptor.getStream(context.getArguments());
                 stub.attach(HeaderMetadata.BINARY_ROOT, transform.build(Packet.boxing(context.getArguments())).getData().toByteArray());
@@ -274,7 +273,7 @@ public class Client {
                 MessageStream<?> reqStream = new MessageStream<>(new MessageObserver<>(reqObserver)).link(respStream);
                 return Packet.ok(reqStream);
             }
-            case BidiStreaming: {
+            case BIDI_STREAMING: {
                 stub.attach(HeaderMetadata.ROOT, descriptor.getSign());
                 MessageStream<?> respStream = descriptor.getStream(context.getArguments());
                 stub.attach(HeaderMetadata.BINARY_ROOT, transform.build(Packet.boxing(context.getArguments())).getData().toByteArray());

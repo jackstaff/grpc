@@ -20,7 +20,6 @@ import io.grpc.*;
 import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
-import org.jackstaff.grpc.annotation.Protocol;
 import org.jackstaff.grpc.configuration.ServerConfig;
 import org.jackstaff.grpc.exception.ValidationException;
 import org.jackstaff.grpc.internal.HeaderMetadata;
@@ -42,7 +41,7 @@ import java.util.concurrent.TimeUnit;
 public class Server {
 
     private final Map<String, ServerBinder<?>> binders = new ConcurrentHashMap<>();
-    private final PacketServerBinder packetBinder =new PacketServerBinder();
+    private PacketServerBinder packetBinder;
     private io.grpc.Server server;
 
     /**
@@ -52,11 +51,11 @@ public class Server {
      * @param interceptors the Interceptor list
      * @param <T> T
      */
-    public <T> void register(Class<T> type, T bean, List<Interceptor> interceptors) {
+    public synchronized <T> void register(Class<T> type, T bean, List<Interceptor> interceptors) {
         if (!type.isInstance(bean)){
             throw new ValidationException(bean.getClass().getName()+ " does NOT instanceof "+type.getName());
         }
-        if (type.getAnnotation(Protocol.class) != null){//v2
+        if (Utils.isV2(type)){
             ServerBinder<T> binder = new ServerBinder<>(type, bean, interceptors);
             if (binders.containsKey(binder.getName())){
                 throw new ValidationException(bean.getClass().getName()+ " duplicate bind "+type.getName());
@@ -64,19 +63,21 @@ public class Server {
             binders.put(binder.getName(), binder);
             return;
         }
+        if (packetBinder == null){
+            packetBinder = new PacketServerBinder();
+        }
         packetBinder.register(type, bean, interceptors);
     }
 
     /**
-     * start server
+     * get netty server builder from config
      * @param cfg server config
+     * @return ServerBuilder
      */
-    public void start(ServerConfig cfg) {
+    public NettyServerBuilder serverBuilder(ServerConfig cfg) {
         NettyServerBuilder builder = NettyServerBuilder.forPort(cfg.getPort());
         binders.values().stream().map(this::bindService).forEach(builder::addService);
-        if (packetBinder.hasBinder()){
-            builder.addService(bindService(packetBinder));
-        }
+        Optional.ofNullable(packetBinder).map(this::bindService).ifPresent(builder::addService);
         if (cfg.getMaxInboundMessageSize() >512*1024){
             builder.maxInboundMessageSize(cfg.getMaxInboundMessageSize());
         }
@@ -107,11 +108,31 @@ public class Server {
                 SslContextBuilder sslContextBuilder = GrpcSslContexts.forServer(new File(cfg.getKyeCertChain()), new File(cfg.getPrivateKey()));
                 builder.sslContext(sslContextBuilder.build());
             }
-            this.server = builder.build();
+            return builder;
+        } catch (Exception e) {
+            throw new ValidationException("Server builder fail ", e);
+        }
+    }
+
+    /**
+     * start server with builder
+     * @param builder ServerBuilder
+     */
+    public void serverStart(ServerBuilder<?> builder){
+        this.server = builder.build();
+        try {
             server.start();
         } catch (Exception e) {
             throw new ValidationException("Server Start fail ", e);
         }
+    }
+
+    /**
+     * start server with cfg
+     * @param cfg server config
+     */
+    public void start(ServerConfig cfg) {
+        serverStart(serverBuilder(cfg));
     }
 
     /**

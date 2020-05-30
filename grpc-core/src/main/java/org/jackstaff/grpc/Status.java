@@ -42,9 +42,11 @@ public class Status {
     public interface Code {
 
         /**
-         * it's mapping for StreamObserver.onCompleted
+         * The operation completed successfully.
+         * It's mapping for StreamObserver.onCompleted
          * @see StreamObserver#onCompleted()
          * @see MessageStatus#getCode()
+         * @see io.grpc.Status.Code#OK
          */
         int OK = 0;//io.grpc.Status.Code.OK
         int CANCELLED = 1;//io.grpc.Status.Code.CANCELLED
@@ -234,10 +236,10 @@ public class Status {
     public static Status fromThrowable(@Nonnull Throwable t) {
         Throwable cause = t;
         while (cause != null) {
-            if (cause instanceof StatusException) {
-                return from(((StatusException) cause).getStatus(), ((StatusException) cause).getTrailers());
-            } else if (cause instanceof StatusRuntimeException) {
-                return from(((StatusRuntimeException) cause).getStatus(), ((StatusRuntimeException) cause).getTrailers());
+            if (cause instanceof io.grpc.StatusException) {
+                return from(((io.grpc.StatusException) cause).getStatus(), ((io.grpc.StatusException) cause).getTrailers());
+            } else if (cause instanceof io.grpc.StatusRuntimeException) {
+                return from(((io.grpc.StatusRuntimeException) cause).getStatus(), ((io.grpc.StatusRuntimeException) cause).getTrailers());
             }
             cause = cause.getCause();
         }

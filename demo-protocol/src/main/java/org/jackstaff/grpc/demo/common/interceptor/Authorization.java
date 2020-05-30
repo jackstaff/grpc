@@ -1,8 +1,9 @@
 package org.jackstaff.grpc.demo.common.interceptor;
 
-import org.jackstaff.grpc.Status;
 import org.jackstaff.grpc.Context;
 import org.jackstaff.grpc.Interceptor;
+import org.jackstaff.grpc.StatusRuntimeException;
+import org.jackstaff.grpc.demo.ErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +20,7 @@ public class Authorization implements Interceptor {
     @Override
     public void before(Context context) throws Exception {
         if (!validate(context, context.getMetadata(AUTHORIZATION))){
-            throw Status.PERMISSION_DENIED.withDescription(context.getMethod().getName()+" No Permission").asRuntimeException();
+            throw new StatusRuntimeException(ErrorCode.PERMISSION_DENIED, context.getMethod().getName()+" No Permission");
         }
     }
 

@@ -42,10 +42,10 @@ public class ClientService {
     private CustomerService customerService;
 
     public void walkThrough() throws Exception{
+//        customerService.welcomeCustomers(new Greeting(null,null, false), new MessageStream<>(t->{logger.info(t.getCode()+"aaaaaa");}));
         walkThroughCustomerService();
         walkThroughHelloService();
         walkThroughAdvanceHelloService();
-
      }
 
     public void walkThroughCustomerService(){
@@ -58,6 +58,8 @@ public class ClientService {
         customerService.welcomeCustomers(new Greeting("hello", null,true), new MessageStream<>(ms->{
             logger.info(now()+" welcomeCustomers response: "+ms);
         }, Constant.DEFAULT_TIMEOUT));
+        customerService.welcomeCustomers(new Greeting(null,null, false), new MessageStream<>(t->{logger.info("this is error code:"+t.getCode());}));
+
         Consumer<Customer> customerConsumer = customerService.sendCustomers(greeting -> logger.info(".."+greeting.getMessage()));
         for (int i = 10; i >=0; i--) {
             customerConsumer.accept(new Customer(i, "namex"+i, Level.VIP, null));
@@ -125,6 +127,7 @@ public class ClientService {
 
     public void walkThroughAdvanceHelloService() throws Exception{
         logger.info("........advancedHelloService..........");
+        advancedHelloService.procedure("the void procedure message");
 
         logger.info("sayHello reply:"+advancedHelloService.sayHello("hello"));
 
