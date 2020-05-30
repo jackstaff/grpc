@@ -4,8 +4,17 @@ Jackstaff gRPC framework
 [Quick Starts](https://github.com/jackstaff/grpc/blob/master/START.md) / [Advance Usage](https://github.com/jackstaff/grpc/blob/master/ADVANCE.md) / [Smooth and friendly use of gRPC](https://github.com/jackstaff/grpc/blob/master/V2.md) / [Origin](https://github.com/jackstaff/grpc/blob/master/ORIGIN.md)
 
 Advance Usage: 
-```java
 
+0. Expandable status / Error codes:
+```java
+public interface ErrorCode extends Status.Code {
+
+    //CODE_RESERVED_RANGE_MAX==100
+
+    int MY_BUSINESS_ERROR_CODE = 1001;
+    int CODE_INVALID_ID = 1002;
+
+}
 ```
 
 1. Monitor status in ClientStreaming/ServerStreaming/BidirectionalStreaming:
@@ -34,7 +43,7 @@ public class MyHelloClientService {
                      System.out.println("timeout");
                     break;
                 case Status.Code.CANCELLED: //...
-                case MY_BUSINESS_ERROR_CODE://application customize error code
+                case ErrorCode.MY_BUSINESS_ERROR_CODE://application customize error code
                 default:
                      System.out.println("errorCode:"+messageStatus.getCode()+", error:"+messageStatus.getCause());
                     break;
@@ -90,14 +99,6 @@ public class MyHelloService implements HelloService {
     
 }
 
-public interface ErrorCode extends Status.Code {
-
-    //CODE_RESERVED_RANGE_MAX==100
-
-    int MY_BUSINESS_ERROR_CODE = 1001;
-    int CODE_INVALID_ID = 1002;
-
-}
 
 ```
 
