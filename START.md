@@ -12,7 +12,7 @@ Step 0: Import grpc-spring-boot-starter in pom.xml
 <dependency>
     <groupId>org.jackstaff.grpc</groupId>
     <artifactId>grpc-spring-boot-starter</artifactId>
-    <version>2.0.6</version>
+    <version>2.0.7</version>
 </dependency>
 
 ```
@@ -39,22 +39,27 @@ public class MyHelloService implements HelloService {
 
     @Override
     public String sayHello(String greeting) {
-        //todo
+        return "reply greeting "+greeting;
     }
 
     @Override
     public void lotsOfReplies(String greeting, Consumer<String> replies) {
-        //todo
+        replies.accept("reply 1");
+        replies.accept("reply 2");
     }
 
     @Override
     public Consumer<String> lotsOfGreetings(List<String> friends) {
-        //todo
+        System.out.println("friends "+friends);
+        return greeting -> System.out.println("receive "+greeting);
     }
 
     @Override
     public Consumer<String> bidiHello(List<String> friends, Consumer<String> replies) {
-        //todo
+        System.out.println("friends "+friends);
+        replies.accept("hello 1");
+        replies.accept("hello 2");
+        return greeting -> System.out.println("receive "+greeting);
     }
 
 }
@@ -67,7 +72,7 @@ import org.jackstaff.grpc.annotation.Client;
 @Service
 public class MyClientService {
 
-    @Client(authority = "my-server") 
+    @Client("my-server") 
     private HelloService helloService;
 
     public String sayHello(String greeting){

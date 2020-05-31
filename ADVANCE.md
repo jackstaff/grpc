@@ -4,8 +4,17 @@ Jackstaff gRPC framework
 [Quick Starts](https://github.com/jackstaff/grpc/blob/master/START.md) / [Advance Usage](https://github.com/jackstaff/grpc/blob/master/ADVANCE.md) / [Smooth and friendly use of gRPC](https://github.com/jackstaff/grpc/blob/master/V2.md) / [Origin](https://github.com/jackstaff/grpc/blob/master/ORIGIN.md)
 
 Advance Usage: 
-```java
 
+0. Expandable status / Error codes:
+```java
+public interface ErrorCode extends Status.Code {
+
+    //CODE_RESERVED_RANGE_MAX==100
+
+    int MY_BUSINESS_ERROR_CODE = 1001;
+    int CODE_INVALID_ID = 1002;
+
+}
 ```
 
 1. Monitor status in ClientStreaming/ServerStreaming/BidirectionalStreaming:
@@ -34,7 +43,7 @@ public class MyHelloClientService {
                      System.out.println("timeout");
                     break;
                 case Status.Code.CANCELLED: //...
-                case MY_BUSINESS_ERROR_CODE://application customize error code
+                case ErrorCode.MY_BUSINESS_ERROR_CODE://application customize error code
                 default:
                      System.out.println("errorCode:"+messageStatus.getCode()+", error:"+messageStatus.getCause());
                     break;
@@ -81,15 +90,15 @@ public class MyHelloService implements HelloService {
         return s->{}; //todo
     }
 
-    static final int MY_BUSINESS_ERROR_CODE = 10001;
     @Override
     public Consumer<String> bidiHello(List<String> friends, Consumer<String> replies) {
         //pass/throw exception to client side with customize error code;
-        ((MessageStream<String>)replies).error(org.jackstaff.grpc.Status.fromCodeValue(MY_BUSINESS_ERROR_CODE));
+        ((MessageStream<String>)replies).error(new org.jackstaff.grpc.StatusRuntimeException(ErrorCode.MY_BUSINESS_ERROR_CODE));
         return s->{}; //todo
     }
     
 }
+
 
 ```
 
@@ -117,7 +126,7 @@ public class Authorization implements Interceptor {
     @Override
     public void before(Context context) throws Exception {
         if (!validate(context, context.getMetadata("Authorization"))){
-            throw Status.PERMISSION_DENIED.withDescription("No Permission").asRuntimeException();
+            throw new org.jackstaff.grpc.StatusRuntimeException(ErrorCode.PERMISSION_DENIED, context.getMethod().getName()+" No Permission");
         }
     }
 
@@ -187,7 +196,7 @@ public interface HelloService {
 
     String sayHello(String greeting); //Unary RPCs
 
-    @AsynchronousUnary
+    @RpcMethod(methodType = MethodType.ASYNCHRONOUS_UNARY)
     default void sayHello(String greeting, Consumer<String> reply){
         //reply.accept(sayHello(greeting));
             //it indicate the channel will closed after call Consumer.accept() only one times
@@ -197,7 +206,7 @@ public interface HelloService {
 
     void lotsOfReplies(String greeting, Consumer<HelloResponse> replies);//Server streaming RPCs
 
-    @BlockingServerStreaming
+    @RpcMethod(methodType = MethodType.BLOCKING_SERVER_STREAMING)
     default List<HelloResponse> lotsOfReplies(String greeting){
     //sync call server streaming,it's alias method,  default + overload ServerStreaming method. NOT need implements.
         return null;

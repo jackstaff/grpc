@@ -11,7 +11,7 @@ Step 0: Import grpc-spring-boot-starter in pom.xml. jdk1.8
 <dependency>
     <groupId>org.jackstaff.grpc</groupId>
     <artifactId>grpc-spring-boot-starter</artifactId>
-    <version>2.0.6</version>
+    <version>2.0.7</version>
 </dependency>
 
 ```
@@ -74,7 +74,7 @@ import org.jackstaff.grpc.annotation.Client;
 @Service
 public class MyClientService {
 
-    @Client(authority = "my-server") 
+    @Client("my-server") 
     private HelloService helloService;
 
     public String sayHello(String greeting){
