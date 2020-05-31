@@ -32,7 +32,7 @@ public class ClientService {
     Logger logger = LoggerFactory.getLogger(ClientService.class);
     ScheduledExecutorService schedule = Executors.newScheduledThreadPool(5);
 
-    @Client(authority = Constant.DEMO_SERVER)
+    @Client(Constant.DEMO_SERVER)
     private HelloService helloService;
 
     @Client(authority = Constant.DEMO_SERVER, interceptor = Credential.class)

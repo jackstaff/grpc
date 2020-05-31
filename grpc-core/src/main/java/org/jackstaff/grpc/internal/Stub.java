@@ -17,6 +17,7 @@
 package org.jackstaff.grpc.internal;
 
 import io.grpc.CallOptions;
+import io.grpc.Internal;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.StreamObserver;
@@ -33,7 +34,8 @@ import static io.grpc.stub.ClientCalls.*;
 /**
  * @author reco@jackstaff.org
  */
-public class Stub<S extends AbstractStub<S>, ReqT, RespT> {
+@Internal
+public final class Stub<S extends AbstractStub<S>, ReqT, RespT> {
 
     private final String authority;
     private final ManagedChannel channel;

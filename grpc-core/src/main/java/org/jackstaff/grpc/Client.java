@@ -168,7 +168,7 @@ public class Client {
     private Object walkThrough(Stub<?,?,?> prototype, MethodDescriptor descriptor, Object proxy,
                                Object[] args, List<Interceptor> interceptors) throws Exception{
         Stub<?,?,?> stub = new Stub<>(prototype, descriptor);
-        Context context =new Context(descriptor, args, proxy).stub(stub);
+        Context context =new Context(descriptor, args, proxy, stub);
         Packet<?> packet = Utils.before(context, interceptors);
         if (!packet.isException()){
             try {

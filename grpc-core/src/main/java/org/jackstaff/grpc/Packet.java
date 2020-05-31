@@ -16,6 +16,8 @@
 
 package org.jackstaff.grpc;
 
+import io.grpc.Internal;
+
 import java.util.Arrays;
 import java.util.function.Consumer;
 
@@ -23,7 +25,8 @@ import java.util.function.Consumer;
  * the package for interact client side and server side
  * @author reco@jackstaff.org
  */
-public class Packet<T> {
+@Internal
+public final class Packet<T> {
 
     private static final int OK = 0;
     private static final int EXCEPTION = 1;

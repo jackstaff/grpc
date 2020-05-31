@@ -16,19 +16,18 @@
 
 package org.jackstaff.grpc;
 
-/**
- * refactor io.grpc.StatusRuntimeException
- * @see Status
- * @see io.grpc.StatusRuntimeException
- * @author reco@jackstaff.org
- */
-
 import io.grpc.Metadata;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Optional;
 
+/**
+ * refactor io.grpc.StatusRuntimeException
+ * @see Status
+ * @see io.grpc.StatusRuntimeException
+ * @author reco@jackstaff.org
+ */
 public final class StatusRuntimeException extends io.grpc.StatusRuntimeException {
 
     public StatusRuntimeException(@Nonnull Throwable t) {

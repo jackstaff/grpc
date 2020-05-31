@@ -6,7 +6,7 @@
 
     <groupId>org.jackstaff.grpc</groupId>
     <artifactId>grpc-generator</artifactId>
-    <version>2.0.7</version>
+    <version>2.0.8</version>
     <name>grpc-generator</name>
     <description>Jackstaff gRPC framework, Smooth and friendly use of gRPC, Code Generator</description>
     <url>https://github.com/jackstaff/grpc</url>
@@ -31,7 +31,7 @@
         <dependency>
             <groupId>org.jackstaff.grpc</groupId>
             <artifactId>grpc-core</artifactId>
-            <version>2.0.7</version>
+            <version>2.0.8</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/com.google.auto.service/auto-service -->
         <dependency>

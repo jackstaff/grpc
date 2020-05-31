@@ -23,7 +23,7 @@ package org.jackstaff.grpc;
  * @see MessageStream
  * @author reco@jackstaff.org
  */
-public class MessageStatus<T> extends Status {
+public final class MessageStatus<T> extends Status {
 
     private T message;
 

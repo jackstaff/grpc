@@ -23,29 +23,29 @@ import com.google.protobuf.*;
  */
 public enum PropertyKind {
 
-    BOOLEAN(Boolean.TYPE, Boolean.class, false,"bool"),
-    BYTE(Byte.TYPE, Byte.class, (byte)0, "int8"),
-    SHORT(Short.TYPE, Short.class, (short)0, "int16"),
-    INT(Integer.TYPE, Integer.class, (int)0, "int32"),
-    LONG(Long.TYPE, Long.class, (long)0, "int64"),
-    CHAR(Character.TYPE, Character.class, (char)0, "character"),
-    FLOAT(Float.TYPE, Float.class, (float)0, "float32"),
-    DOUBLE(Double.TYPE, Double.class, (double)0, "float64"),
+    BOOLEAN(Boolean.TYPE, Boolean.class, "false","bool"),
+    BYTE(Byte.TYPE, Byte.class, "(byte)0", "int8"),
+    SHORT(Short.TYPE, Short.class, "(short)0", "int16"),
+    INT(Integer.TYPE, Integer.class, "(int)0", "int32"),
+    LONG(Long.TYPE, Long.class, "(long)0", "int64"),
+    CHAR(Character.TYPE, Character.class, "(char)0", "character"),
+    FLOAT(Float.TYPE, Float.class, "(float)0", "float32"),
+    DOUBLE(Double.TYPE, Double.class, "(double)0", "float64"),
 
-    DOUBLE_VALUE(DoubleValue.class, Double.class, (double)0, "doubleValue"),
-    FLOAT_VALUE(FloatValue.class, Float.class, (float)0, "floatValue"),
-    INT_VALUE(Int32Value.class, Integer.class, 0,"int32Value"),
-    LONG_VALUE(Int64Value.class, Long.class, (long)0, "int64Value"),
-    U_INT_VALUE(UInt32Value.class, Integer.class, (int)0, "uint32Value"),
-    U_LONG_VALUE(UInt64Value.class, Long.class, (long)0, "uint64Value"),
-    BOOL_VALUE(BoolValue.class, Boolean.class, false,"boolValue"),
+    DOUBLE_VALUE(DoubleValue.class, Double.class, "(double)0", "doubleValue"),
+    FLOAT_VALUE(FloatValue.class, Float.class, "(float)0", "floatValue"),
+    INT_VALUE(Int32Value.class, Integer.class, "(int)0","int32Value"),
+    LONG_VALUE(Int64Value.class, Long.class, "(long)0", "int64Value"),
+    U_INT_VALUE(UInt32Value.class, Integer.class, "(int)0", "uint32Value"),
+    U_LONG_VALUE(UInt64Value.class, Long.class, "(long)0", "uint64Value"),
+    BOOL_VALUE(BoolValue.class, Boolean.class, "false","boolValue"),
     DURATION(Duration.class, java.time.Duration.class, null,"duration"),
     TIMESTAMP(Timestamp.class, java.sql.Timestamp.class, null,"timestamp"),
     STRING_VALUE(StringValue.class, String.class, null,"stringValue"),
     BYTES_VALUE(BytesValue.class, byte[].class, null,"bytesValue"),
 
-    STRING(String.class, String.class, "","string"),  //String..getXXX(),  ..ByteString..getXXXBytes(),,,
-    BYTES(ByteString.class, byte[].class, new byte[0],"bytes"), //ByteString.. getXXX()
+    STRING(String.class, String.class, "\"\"","string"),  //String..getXXX(),  ..ByteString..getXXXBytes(),,,
+    BYTES(ByteString.class, byte[].class, "new byte[0]","bytes"), //ByteString.. getXXX()
 
     MESSAGE("message"), //getXXX(), hasXXX()
 
@@ -72,14 +72,14 @@ public enum PropertyKind {
 
     private final Class<?> rawType;
     private final Class<?> boxingType;
-    private final Object defaultValue;
+    private final String defaultValue;
     private final String func;
 
     PropertyKind(String func) {
         this(null, null, null, func);
     }
 
-    PropertyKind(Class<?> rawType, Class<?> boxingType, Object defaultValue, String func) {
+    PropertyKind(Class<?> rawType, Class<?> boxingType, String defaultValue, String func) {
         this.rawType = rawType;
         this.boxingType = boxingType;
         this.defaultValue = defaultValue;
@@ -154,7 +154,7 @@ public enum PropertyKind {
         return boxingType;
     }
 
-    public Object defaultValue() {
+    public String defaultValue() {
         return defaultValue;
     }
 

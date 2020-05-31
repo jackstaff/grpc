@@ -223,15 +223,22 @@ class Property {
         } else {
             switch (kind.category()) {
                 case PRIMITIVE:
+                case STRING:
+                case BYTES:
                     spec.addStatement("return this.$N == $T.$N ? ($T)$N : $N",
                             oneOfCase.fieldName(), oneOfCase.typeName(), oneOfCase.enumName(name),
-                            TypeName.get(kind.boxingType()), oneOfCase.refFieldName(), kind.defaultValue().toString());
+                            TypeName.get(kind.boxingType()), oneOfCase.refFieldName(), kind.defaultValue());
                     break;
-                case STRING:
-                    spec.addStatement("return this.$N == $T.$N ? ($T)$N : \"\"",
-                            oneOfCase.fieldName(), oneOfCase.typeName(), oneOfCase.enumName(name),
-                            typeName(), oneOfCase.refFieldName());
-                    break;
+//                case STRING:
+//                    spec.addStatement("return this.$N == $T.$N ? ($T)$N : $N",
+//                            oneOfCase.fieldName(), oneOfCase.typeName(), oneOfCase.enumName(name),
+//                            typeName(), oneOfCase.refFieldName(), kind.defaultValue());
+//                    break;
+//                case BYTES:
+//                    spec.addStatement("return this.$N == $T.$N ? ($T)$N : new byte[0]",
+//                            oneOfCase.fieldName(), oneOfCase.typeName(), oneOfCase.enumName(name),
+//                            typeName(), oneOfCase.refFieldName());
+//                    break;
                 case ENUM:
                     if (kind == PropertyKind.ONE_OF_CASE){
                         transForms.error("NEVER: ONE_OF_CASE's ONE_OF_CASE");
@@ -244,11 +251,6 @@ class Property {
                 case MESSAGE:
                 case WRAPPER:
                     spec.addStatement("return this.$N == $T.$N ? ($T)$N : null",
-                            oneOfCase.fieldName(), oneOfCase.typeName(), oneOfCase.enumName(name),
-                            typeName(), oneOfCase.refFieldName());
-                    break;
-                case BYTES:
-                    spec.addStatement("return this.$N == $T.$N ? ($T)$N : new byte[0]",
                             oneOfCase.fieldName(), oneOfCase.typeName(), oneOfCase.enumName(name),
                             typeName(), oneOfCase.refFieldName());
                     break;
@@ -273,11 +275,11 @@ class Property {
         } else {
             switch (kind.category()) {
                 case PRIMITIVE:
-                    spec.addStatement("this.$N = $T.$N", oneOfCase.fieldName(), oneOfCase.typeName(), oneOfCase.enumName(name));
                     spec.addStatement("this.$N = $N", oneOfCase.refFieldName(), fieldName());
+                    spec.addStatement("this.$N = $T.$N", oneOfCase.fieldName(), oneOfCase.typeName(), oneOfCase.enumName(name));
                     break;
                 case ENUM:
-                    spec.addStatement("if ($N == $T.$N) throw new $T(\"$N must not be unknown value\")",
+                    spec.addStatement("if ($N == $T.$N) \nthrow new $T(\"$N must not be unknown value\")",
                             fieldName(), typeName(), enumNameSpecial, IllegalArgumentException.class, fieldName());
                     //break;
                 case STRING:
@@ -344,8 +346,7 @@ class Property {
                             protoTypeName, p.name(fGet), builderTypeName, p.name(fSet));
                     break;
                 case WRAPPER:
-                    block.addStatement("registry.value($T.$N, $T::$N, $T::$N, $T::$N, $T::$N, $T::$N, $T::$N)",
-                            PropertyKind.class, p.kind.name(),
+                    block.addStatement("registry.$N($T::$N, $T::$N, $T::$N, $T::$N, $T::$N, $T::$N)",p.kind.func(),
                             typeName, p.name(fHas), typeName, p.name(fGet), typeName, p.name(fSet),
                             protoTypeName, p.name(fHas), protoTypeName, p.name(fGet), builderTypeName, p.name(fSet));
                     break;
@@ -378,8 +379,8 @@ class Property {
                             break;
                         case BYTES_LIST:
                         case WRAPPER_LIST:
-                            block.addStatement("registry.list($T.$N, $T::$N, $T::$N, $T::$N, $T::$N, $T::$N)",
-                                    PropertyKind.class, p.elementKind.name(),
+                            block.addStatement("registry.$Ns($T::$N, $T::$N, $T::$N, $T::$N, $T::$N)", p.elementKind.func(),
+                                   // PropertyKind.class, p.elementKind.name(),
                                     typeName, p.name(fHas), typeName, p.name(fGet), typeName, p.name(fSet),
                                     protoTypeName, p.name(fList), builderTypeName, p.name(fAddAll));
                             break;
@@ -406,7 +407,9 @@ class Property {
                 switch (p.kind.category()) {
                     case PRIMITIVE:
                     case STRING:
-                        code.add("mapping($T.$N, $T::$N, $T::$N, $T::$N, $T::$N).",
+                    case WRAPPER:
+                    case BYTES:
+                        code.add("$N($T.$N, $T::$N, $T::$N, $T::$N, $T::$N).", p.kind.func(),
                                 oneOf.typeName(), oneOf.enumName(p.name),
                                 typeName, p.name(fGet), typeName, p.name(fSet),
                                 protoTypeName, p.name(fGet), builderTypeName, p.name(fSet));
@@ -415,13 +418,6 @@ class Property {
                     case ENUM:
                         code.add("mapping($T.$N, $T.class, $T::$N, $T::$N, $T::$N, $T::$N).",
                                 oneOf.typeName(), oneOf.enumName(p.name), p.typeName(),
-                                typeName, p.name(fGet), typeName, p.name(fSet),
-                                protoTypeName, p.name(fGet), builderTypeName, p.name(fSet));
-                        break;
-                    case WRAPPER:
-                    case BYTES:
-                        code.add("mapping($T.$N, $T.$N, $T::$N, $T::$N, $T::$N, $T::$N).",
-                                oneOf.typeName(), oneOf.enumName(p.name), PropertyKind.class, p.kind.name(),
                                 typeName, p.name(fGet), typeName, p.name(fSet),
                                 protoTypeName, p.name(fGet), builderTypeName, p.name(fSet));
                         break;

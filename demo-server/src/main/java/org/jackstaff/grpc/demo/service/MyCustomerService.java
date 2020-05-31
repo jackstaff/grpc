@@ -99,7 +99,7 @@ public class MyCustomerService implements CustomerService {
         }
         DataModel dm = new DataModel();
 
-        dm.setOoEnum(Level.VIP);
+        dm.setOoLevel(Level.VIP);
         dm.setOoInt32(id.getId());
 
         dm.setTheBool(true);

@@ -16,6 +16,7 @@
 
 package org.jackstaff.grpc;
 
+import io.grpc.Internal;
 import org.jackstaff.grpc.annotation.RpcMethod;
 import org.jackstaff.grpc.exception.ValidationException;
 import org.jackstaff.grpc.internal.InternalGrpc;
@@ -34,8 +35,9 @@ import java.util.stream.IntStream;
 /**
  * @author reco@jackstaff.org
  */
+@Internal
 @SuppressWarnings("rawtypes")
-public class MethodDescriptor {
+public final class MethodDescriptor {
 
     private final boolean v2;
     private final Class<?> type;
@@ -46,11 +48,10 @@ public class MethodDescriptor {
     private final MethodType methodType;
     private final MethodType annotationType;
     private final int streamIndex;
+    private final io.grpc.MethodDescriptor grpcMethod;
     private MethodDescriptor peer;
     private Transform requestTransform;
     private Transform responseTransform;
-    private io.grpc.MethodDescriptor grpcMethod;
-    private String serviceName;
 
     public MethodDescriptor(Class<?> type, Method method) {
         this(type, method, null, null);
@@ -61,7 +62,7 @@ public class MethodDescriptor {
         this.type = type;
         this.method = method;
         this.bean = bean;
-        this.interceptors = interceptors;
+        this.interceptors = interceptors != null ? Collections.unmodifiableList(interceptors) : Collections.emptyList();
         this.annotationType = Optional.ofNullable(method.getAnnotation(RpcMethod.class)).map(RpcMethod::methodType).orElse(null);
         this.methodType = checkMethodType(annotationType);
         if (annotationType != null && annotationType != this.methodType){
@@ -74,10 +75,11 @@ public class MethodDescriptor {
     }
 
     private String buildSign(){
+        String serviceName;
         try {
-            this.serviceName = (String) type.getField("SERVICE_NAME").get(null);
+            serviceName = (String) type.getField("SERVICE_NAME").get(null);
         }catch (Throwable ignore){
-            this.serviceName = type.getSimpleName();
+            serviceName = type.getSimpleName();
         }
         String name = type.getName()+"/" + method.toString();
         String id= UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)).toString();
@@ -177,7 +179,7 @@ public class MethodDescriptor {
         throw new ValidationException(method + " invalid sign");
     }
 
-    public MethodDescriptor getPeer() {
+    MethodDescriptor getPeer() {
         return peer;
     }
 
@@ -230,16 +232,16 @@ public class MethodDescriptor {
         return method;
     }
 
-    public String getSign() {
+    String getSign() {
         return sign;
     }
 
-    public @Nonnull MessageStream<?> getStream(Object[] args){
+    @Nonnull MessageStream<?> getStream(Object[] args){
         Consumer<?> consumer = streamIndex >=0 ? (Consumer<?>) args[streamIndex] : t->{};
         return MessageStream.build(consumer);
     }
 
-    public void setStream(Object[] args, MessageStream<?> stream){
+    void setStream(Object[] args, MessageStream<?> stream){
         if (streamIndex >=0) {
             args[streamIndex] = stream;
         }

@@ -16,6 +16,7 @@
 
 package org.jackstaff.grpc;
 
+import io.grpc.Internal;
 import io.grpc.stub.StreamObserver;
 
 import java.util.Iterator;
@@ -25,6 +26,7 @@ import java.util.Iterator;
  *
  * @author reco@jackstaff.org
  */
+@Internal
 public interface Transform<Pojo, Proto> {
 
     Pojo from(Proto proto);

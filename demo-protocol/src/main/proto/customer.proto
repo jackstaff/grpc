@@ -86,38 +86,85 @@ message DataModel {
     string theString =14;
     bytes theBytes = 15;
 
-    google.protobuf.DoubleValue theDoubleValue = 16;
-    google.protobuf.FloatValue theFloatValue = 17;
-    google.protobuf.Int32Value theInt32Value = 18;
-    google.protobuf.Int64Value theInt64Value = 19;
-    google.protobuf.UInt32Value theUInt32Value = 20;
-    google.protobuf.UInt64Value theUInt64Value = 21;
-    google.protobuf.BoolValue theBoolValue = 22;
-    google.protobuf.StringValue theStringValue = 23;
-    google.protobuf.BytesValue theBytesValue = 24;
-    google.protobuf.Duration theDuration = 25;
-    google.protobuf.Timestamp theTimestamp = 26;
+    google.protobuf.DoubleValue theDoubleValue =16;
+    google.protobuf.FloatValue theFloatValue =17;
+    google.protobuf.Int32Value theInt32Value =18;
+    google.protobuf.Int64Value theInt64Value =19;
+    google.protobuf.UInt32Value theUInt32Value =20;
+    google.protobuf.UInt64Value theUInt64Value =21;
+    google.protobuf.BoolValue theBoolValue =22;
+    google.protobuf.StringValue theStringValue =23;
+    google.protobuf.BytesValue theBytesValue =24;
+    google.protobuf.Duration theDuration =25;
+    google.protobuf.Timestamp theTimestamp =26;
+    TheEmbedEnum theEnum =27;
+    TheEmbedMessage theMessage =28;
 
-    repeated int32 theRepeatedInt32 = 27;
-    repeated string theRepeatedString = 28;
-    repeated bytes theRepeatedBytes = 29;
-    repeated google.protobuf.DoubleValue theRepeatedDoubleValue = 30;
-    repeated google.protobuf.StringValue theRepeatedStringValue = 31;
-    repeated google.protobuf.BytesValue theRepeatedBytesValue = 32;
-    repeated Level theRepeatedEnum = 33;
-    repeated Address theRepeatedMessage = 34;
+    repeated bool theRepeatedBool =31;
+    repeated double theRepeatedDouble =32;
+    repeated float theRepeatedFloat =33;
+    repeated int32 theRepeatedInt32 =34;
+    repeated int64 theRepeatedInt64 =35;
+    repeated uint32 theRepeatedUInt32 =36;
+    repeated uint64 theRepeatedUInt64 =37;
+    repeated sint32 theRepeatedSInt32 =38;
+    repeated sint64 theRepeatedSInt64 =39;
+    repeated fixed32 theRepeatedFixed32 =310;
+    repeated fixed64 theRepeatedFixed64 =311;
+    repeated sfixed32 theRepeatedSFixed32 =312;
+    repeated sfixed64 theRepeatedSFixed64 =313;
+    repeated string theRepeatedString =314;
+    repeated bytes theRepeatedBytes =315;
 
-    TheEmbedEnum theEnum = 35;
-    TheEmbedMessage theMessage = 36;
+    repeated google.protobuf.DoubleValue theRepeatedDoubleValue =316;
+    repeated google.protobuf.FloatValue theRepeatedFloatValue =317;
+    repeated google.protobuf.Int32Value theRepeatedInt32Value =318;
+    repeated google.protobuf.Int64Value theRepeatedInt64Value =319;
+    repeated google.protobuf.UInt32Value theRepeatedUInt32Value =320;
+    repeated google.protobuf.UInt64Value theRepeatedUInt64Value =321;
+    repeated google.protobuf.BoolValue theRepeatedBoolValue =322;
+    repeated google.protobuf.StringValue theRepeatedStringValue =323;
+    repeated google.protobuf.BytesValue theRepeatedBytesValue =324;
+    repeated google.protobuf.Duration theRepeatedDuration =325;
+    repeated google.protobuf.Timestamp theRepeatedTimestamp =326;
+
+    repeated Level theRepeatedEnum = 327;
+    repeated Address theRepeatedMessage = 328;
+
 
     oneof TheOneOf {
-        bytes ooBytes = 39;
-        bool ooBool = 40;
-        int32 ooInt32 = 41;
-        string ooString = 42;
-        google.protobuf.DoubleValue ooDoubleValue = 43;
-        Level ooEnum = 44;
-        Address ooMessage = 45;
+        bool ooBool =51;
+        double ooDouble =52;
+        float ooFloat =53;
+        int32 ooInt32 =54;
+        int64 ooInt64 =55;
+        uint32 ooUInt32 =56;
+        uint64 ooUInt64 =57;
+        sint32 ooSInt32 =58;
+        sint64 ooSInt64 =59;
+        fixed32 ooFixed32 =510;
+        fixed64 ooFixed64 =511;
+        sfixed32 ooSFixed32 =512;
+        sfixed64 ooSFixed64 =513;
+        string ooString =514;
+        bytes ooBytes =515;
+
+        google.protobuf.DoubleValue ooDoubleValue =516;
+        google.protobuf.FloatValue ooFloatValue =517;
+        google.protobuf.Int32Value ooInt32Value =518;
+        google.protobuf.Int64Value ooInt64Value =519;
+        google.protobuf.UInt32Value ooUInt32Value =520;
+        google.protobuf.UInt64Value ooUInt64Value =521;
+        google.protobuf.BoolValue ooBoolValue =522;
+        google.protobuf.StringValue ooStringValue =523;
+        google.protobuf.BytesValue ooBytesValue =524;
+        google.protobuf.Duration ooDuration =525;
+        google.protobuf.Timestamp ooTimestamp =526;
+        TheEmbedEnum ooEnum =527;
+        TheEmbedMessage ooMessage =528;
+
+        Level ooLevel = 44;
+        Address ooAddress = 45;
     };
 
     message TheEmbedMessage {

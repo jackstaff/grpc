@@ -30,24 +30,24 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author reco@jackstaff.org
  * @see Interceptor
  */
-public class Context {
+public final class Context {
 
     private final Object[] arguments;
     private final Object target;
     private final Map<Object, Object> attributes;
     private final MethodDescriptor methodDescriptor;
-    private Stub<?,?,?> stub;
+    private final Stub<?,?,?> stub;
 
-    Context(MethodDescriptor methodDescriptor, Object[] arguments, Object target){
+    Context(MethodDescriptor methodDescriptor, Object[] arguments, Object target, Stub<?,?,?> stub){
         this.attributes = new ConcurrentHashMap<>();
         this.methodDescriptor = methodDescriptor;
         this.arguments = Optional.ofNullable(arguments).orElse(new Object[0]);
         this.target = target;
+        this.stub = stub;
     }
 
-    Context stub(Stub<?,?,?> stub){
-        this.stub = stub;
-        return this;
+    Context(MethodDescriptor methodDescriptor, Object[] arguments, Object target){
+        this(methodDescriptor, arguments, target, null);
     }
 
     /**

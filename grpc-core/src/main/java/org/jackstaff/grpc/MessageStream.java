@@ -33,7 +33,7 @@ import java.util.function.Consumer;
  *
  * @author reco@jackstaff.org
  */
-public class MessageStream<T> implements Consumer<T> {
+public final class MessageStream<T> implements Consumer<T> {
 
     private final StreamObserver<T> observer;
     private Duration timeout;
