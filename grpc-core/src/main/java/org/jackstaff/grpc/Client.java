@@ -199,7 +199,7 @@ public class Client {
                 return Packet.ok(stub.blockingUnary((ReqT) args[0]));
             }
             case ASYNCHRONOUS_UNARY: {
-                MessageStream<RespT> respStream = MessageStream.build((Consumer<RespT>) args[1]).unary();
+                MessageStream<RespT> respStream = MessageStream.build((Consumer<RespT>) args[1]);
                 stub.attachDeadline(respStream.timeout());
                 stub.asyncUnary((ReqT)args[0], respStream.toStreamObserver());
                 return new Packet<>();
@@ -217,7 +217,7 @@ public class Client {
                 return new Packet<>();
             }
             case CLIENT_STREAMING: {
-                MessageStream<RespT> respStream = MessageStream.build((Consumer<RespT>) args[0]).unary();
+                MessageStream<RespT> respStream = MessageStream.build((Consumer<RespT>) args[0]);
                 stub.attachDeadline(respStream.timeout());
                 StreamObserver<ReqT> reqObserver = stub.asyncClientStreaming(respStream.toStreamObserver());
                 MessageStream<ReqT> reqStream = new MessageStream<>(reqObserver).link(respStream);
@@ -248,7 +248,7 @@ public class Client {
                 MethodDescriptor peer = descriptor.getPeer();
                 stub.attach(HeaderMetadata.ROOT, peer.getSign());
                 Object[] args = Arrays.copyOf(context.getArguments(), peer.getMethod().getParameterCount()); //-1
-                MessageStream<?> respStream = descriptor.getStream(context.getArguments()).unary();
+                MessageStream<?> respStream = descriptor.getStream(context.getArguments());
                 stub.attachDeadline(respStream.timeout());
                 stub.asyncUnary(Packet.boxing(args), respStream.toPacketStreamObserver());
                 return new Packet<>();
