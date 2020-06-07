@@ -18,6 +18,8 @@ package org.jackstaff.grpc;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * Workflow interface that allows for the Client/Server execution chains.
@@ -53,9 +55,9 @@ public interface Interceptor {
 
     /**
      * @param context the Context
-     * @throws Exception if don't let it go
+     * @throws RuntimeException if don't let it go
      */
-    default void before(Context context) throws Exception {
+    default void before(Context context) throws RuntimeException {
     }
 
     /**
@@ -84,6 +86,5 @@ public interface Interceptor {
     default void recall(Context context, @Nonnull Exception ex) {
 
     }
-
 
 }

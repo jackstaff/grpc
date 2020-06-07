@@ -9,6 +9,7 @@ import org.jackstaff.grpc.demo.*;
 import org.jackstaff.grpc.demo.common.interceptor.Credential;
 import org.jackstaff.grpc.demo.protocol.common.Id;
 import org.jackstaff.grpc.demo.protocol.customer.*;
+import org.jackstaff.grpc.interceptor.Attachment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -38,7 +39,7 @@ public class ClientService {
     @Client(authority = Constant.DEMO_SERVER, interceptor = Credential.class)
     private AdvancedHelloService advancedHelloService;
 
-    @Client(authority = Constant.DEMO_SERVER, interceptor = Credential.class)
+    @Client(authority = Constant.DEMO_SERVER, interceptor = {Credential.class, Attachment.class})
     private CustomerService customerService;
 
     public void walkThrough() throws Exception{
@@ -64,9 +65,16 @@ public class ClientService {
         for (int i = 10; i >=0; i--) {
             customerConsumer.accept(new Customer(i, "namex"+i, Level.VIP, null));
         }
-        MessageStream<Greeting> greetings= (MessageStream<Greeting>)customerService.bidiGreeting(new MessageStream<>(ms->{
-            logger.info("bidiGreeting response:" +ms);
-        }, Duration.ofSeconds(30)));
+        Attachment.attach(context -> context.setMetadata("myTestMetadataKey", "this is my special data"));
+        MessageStream<Greeting> greetings;
+        try {
+            greetings= (MessageStream<Greeting>)customerService.bidiGreeting(new MessageStream<>(ms->{
+                logger.info("bidiGreeting response:" +ms);
+            }, Duration.ofSeconds(30)));
+        }finally {
+            Attachment.detach();
+        }
+
         for (int i = 0; i < 20; i++) {
             int delay = i+1;
             schedule.schedule(()->greetings.accept(new Greeting("hello"+delay, new byte[0], delay==20)), delay, TimeUnit.SECONDS);

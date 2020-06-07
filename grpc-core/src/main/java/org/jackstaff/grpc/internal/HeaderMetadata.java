@@ -79,16 +79,16 @@ public class HeaderMetadata<T> {
         return attach(stub, binaryKey(name), value);
     }
 
-    static <T> T getValue(Metadata.Key<T> key){
-        return Optional.ofNullable(ROOT.contextKey.get()).map(ctx->ctx.get(key)).orElse(null);
+    private static <T> T getValue(Context context, Metadata.Key<T> key){
+        return Optional.ofNullable(ROOT.contextKey.get(context)).map(ctx->ctx.get(key)).orElse(null);
     }
 
-    public static byte[] binaryValue(String name){
-        return getValue(binaryKey(name));
+    public static byte[] binaryValue(Context context, String name){
+        return getValue(context, binaryKey(name));
     }
 
-    public static String stringValue(String name){
-        return getValue(stringKey(name));
+    public static String stringValue(Context context, String name){
+        return getValue(context, stringKey(name));
     }
 
     <S extends AbstractStub<S>> S attach(S stub, T value){
@@ -98,7 +98,11 @@ public class HeaderMetadata<T> {
     }
 
     public T getValue(){
-        return getValue(key);
+        return getValue(Context.current());
+    }
+
+    public T getValue(Context context){
+        return getValue(context, key);
     }
 
     public Context capture(String authority, Attributes attributes, Metadata headers){

@@ -14,7 +14,7 @@ public class Credential implements Interceptor {
     Logger logger = LoggerFactory.getLogger(Credential.class);
 
     @Override
-    public void before(Context context) throws Exception {
+    public void before(Context context) {
         context.setMetadata(Authorization.AUTHORIZATION, getCredential(context));
     }
 

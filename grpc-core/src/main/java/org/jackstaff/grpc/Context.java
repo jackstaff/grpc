@@ -37,17 +37,25 @@ public final class Context {
     private final Map<Object, Object> attributes;
     private final MethodDescriptor methodDescriptor;
     private final Stub<?,?,?> stub;
+    private final io.grpc.Context context;
 
-    Context(MethodDescriptor methodDescriptor, Object[] arguments, Object target, Stub<?,?,?> stub){
+    private Context(MethodDescriptor methodDescriptor, Object[] arguments, Object target, io.grpc.Context context, Stub<?,?,?> stub){
         this.attributes = new ConcurrentHashMap<>();
         this.methodDescriptor = methodDescriptor;
         this.arguments = Optional.ofNullable(arguments).orElse(new Object[0]);
         this.target = target;
         this.stub = stub;
+        this.context = context;
+        //java.util.stream.Collector
+//        com.google.common.collect.ImmutableSet.
+    }
+
+    Context(MethodDescriptor methodDescriptor, Object[] arguments, Object target, Stub<?,?,?> stub){
+        this(methodDescriptor, arguments, target, null, stub);
     }
 
     Context(MethodDescriptor methodDescriptor, Object[] arguments, Object target){
-        this(methodDescriptor, arguments, target, null);
+        this(methodDescriptor, arguments, target, io.grpc.Context.current(), null);
     }
 
     /**
@@ -115,7 +123,7 @@ public final class Context {
      * @return value
      */
     public String getMetadata(String name) {
-        return HeaderMetadata.stringValue(name);
+        return Optional.ofNullable(context).map(ctx-> HeaderMetadata.stringValue(ctx, name)).orElse(null);
     }
 
     /**

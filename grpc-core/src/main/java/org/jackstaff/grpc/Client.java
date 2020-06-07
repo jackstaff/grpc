@@ -125,6 +125,10 @@ public class Client {
         });
     }
 
+    public <T> T autowired(String authority, Class<T> type, List<Interceptor> interceptors) {
+        return autowired(authority, type, true, interceptors);
+    }
+
     /**
      * delegate a "protocol interface" type which the server run at "authority" machine
      *
@@ -187,6 +191,7 @@ public class Client {
     @SuppressWarnings("unchecked")
     private <ReqT, RespT> Packet<?> v2StubCall(Context context, Stub<?, ReqT, RespT> stub) {
         MethodDescriptor descriptor = context.getMethodDescriptor();
+//        stub.attach(HeaderMetadata.ROOT, descriptor.getSign());
         Object[] args = context.getArguments();
         switch (descriptor.getMethodType()) {
             case UNARY: {

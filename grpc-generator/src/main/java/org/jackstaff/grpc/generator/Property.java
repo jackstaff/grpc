@@ -125,15 +125,20 @@ class Property {
         return typeName;
     }
 
-    TransFormInfo dependency(){
+    TypeMirror dependencyType(){
         switch (kind) {
             case ENUM:
+            case ONE_OF_CASE:
             case MESSAGE:
             case MESSAGE_LIST:
             case ENUM_LIST:
-                return transForms.get(findExecutor(fGet).getReturnType());
+                return findExecutor(fGet).getReturnType();
         }
         return null;
+    }
+
+    TransFormInfo dependency(){
+        return Optional.ofNullable(dependencyType()).map(transForms::get).orElse(null);
     }
 
     private TypeName typeNameImp() {

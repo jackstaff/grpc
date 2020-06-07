@@ -60,6 +60,10 @@ class RegistryMapping {
         return builder != null;
     }
 
+    public TypeSpec.Builder getBuilder() {
+        return builder;
+    }
+
     public void write(){
         if (builder != null) {
             Utils.write(processingEnv, packageName, builder);

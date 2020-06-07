@@ -18,7 +18,7 @@ public class Authorization implements Interceptor {
     Logger logger = LoggerFactory.getLogger(Authorization.class);
 
     @Override
-    public void before(Context context) throws Exception {
+    public void before(Context context) {
         if (!validate(context, context.getMetadata(AUTHORIZATION))){
             throw new StatusRuntimeException(ErrorCode.PERMISSION_DENIED, context.getMethod().getName()+" No Permission");
         }

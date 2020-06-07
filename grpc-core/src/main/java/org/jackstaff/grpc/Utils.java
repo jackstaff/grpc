@@ -16,8 +16,6 @@
 
 package org.jackstaff.grpc;
 
-import io.grpc.StatusException;
-import io.grpc.StatusRuntimeException;
 import org.jackstaff.grpc.annotation.Protocol;
 
 import javax.annotation.Nonnull;

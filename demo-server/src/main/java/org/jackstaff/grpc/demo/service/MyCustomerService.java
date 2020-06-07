@@ -1,5 +1,6 @@
 package org.jackstaff.grpc.demo.service;
 
+import org.jackstaff.grpc.Context;
 import org.jackstaff.grpc.MessageStream;
 import org.jackstaff.grpc.Status;
 import org.jackstaff.grpc.StatusRuntimeException;
@@ -10,6 +11,7 @@ import org.jackstaff.grpc.demo.common.interceptor.LoggerInfo;
 import org.jackstaff.grpc.demo.protocol.*;
 import org.jackstaff.grpc.demo.protocol.common.*;
 import org.jackstaff.grpc.demo.protocol.customer.*;
+import org.jackstaff.grpc.interceptor.CurrentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +24,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-@Server(service = CustomerService.class, interceptor = {LoggerInfo.class, Authorization.class})
+@Server(service = CustomerService.class, interceptor = {CurrentContext.class, LoggerInfo.class, Authorization.class})
 public class MyCustomerService implements CustomerService {
 
     Logger logger = LoggerFactory.getLogger(MyCustomerService.class);
@@ -72,10 +74,12 @@ public class MyCustomerService implements CustomerService {
                 ((MessageStream<Greeting>)greetingResponse).done();
             });
         });
+        Context context = CurrentContext.get();
         MessageStream<Greeting> responses = (MessageStream<Greeting>) greetingResponse;
         for (int i = 0; i < 30; i++) {
             int delay =i+1;
             schedule.schedule(()->{
+                logger.info("myTestMetadataKey:"+context.getMetadata("myTestMetadataKey"));
                 if (responses.isClosed()) {
                     logger.info("greetings closed "+responses.getStatus());
                 }else {

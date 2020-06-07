@@ -6,6 +6,7 @@ import org.jackstaff.grpc.annotation.Server;
 import org.jackstaff.grpc.demo.*;
 import org.jackstaff.grpc.demo.common.interceptor.Authorization;
 import org.jackstaff.grpc.demo.common.interceptor.LoggerInfo;
+import org.jackstaff.grpc.interceptor.CurrentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
-@Server(service = AdvancedHelloService.class, interceptor = {LoggerInfo.class, Authorization.class})
+@Server(service = AdvancedHelloService.class, interceptor = {CurrentContext.class, LoggerInfo.class, Authorization.class})
 public class MyAdvancedHelloService implements AdvancedHelloService {
 
     Logger logger = LoggerFactory.getLogger(MyAdvancedHelloService.class);
@@ -34,6 +35,7 @@ public class MyAdvancedHelloService implements AdvancedHelloService {
 
     @Override
     public String sayHello(String greeting) {
+        logger.info("grpc-jackstaff:"+CurrentContext.get().getMetadata("grpc-jackstaff"));
         logger.info("MyAdvancedHelloService.sayHello receive: {}", greeting);
         return "MyAdvancedHelloService.ok";
     }
@@ -47,7 +49,7 @@ public class MyAdvancedHelloService implements AdvancedHelloService {
             int index = i;
             schedule.schedule(()->{
                 if (index >3){
-                    logger.info("timmmmmmmm"+channel);
+                    logger.info("..."+channel);
                 }
                 HelloResponse response =new HelloResponse("lotsOfReplies(ServerStreaming)"+index+":"+greeting.charAt(index));
                 if (channel.isClosed()){

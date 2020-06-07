@@ -75,7 +75,12 @@ class TransFormInfos {
     }
 
     public TransFormInfo get(TypeMirror typeMirror){
-        return Optional.ofNullable((TypeElement) types.asElement(typeMirror)).map(this::get).orElse(null);
+        TypeElement ele = (TypeElement) types.asElement(typeMirror);
+        return Optional.ofNullable(this.get(ele)).orElseGet(()->{
+            TransFormInfo info= new TransFormInfo(processingEnv, this, ele);
+            this.infos.put(ele, info);
+            return info;
+        });
     }
 
     public void put(TypeElement ele, TransFormInfo info){
@@ -85,7 +90,7 @@ class TransFormInfos {
     private boolean isJackstaffProto(Element element){
         String proto = processingEnv.getOptions().getOrDefault("JackstaffProto", "Proto");
         for (String s: proto.split(",")){
-            if (element.toString().endsWith(s)){
+            if ("*".equals(s) || element.toString().endsWith(s)){
                 return true;
             }
         }
@@ -108,20 +113,29 @@ class TransFormInfos {
         return name;
     }
 
-    public TypeElement getJackstaffParent(TypeElement protoElement) {
-        return jackstaffProto(parents.computeIfAbsent(protoElement, ele->{
-            List<Element> list = new ArrayList<>();
-            Element parent = protoElement.getEnclosingElement();
-            while (parent.getKind() == ElementKind.CLASS) {
-                list.add(parent);
-                parent = parent.getEnclosingElement();
-            }
-            Collections.reverse(list);
-            return list.stream().filter(this::isJackstaffProto).findFirst().map(Object::toString).orElse("");
-        }));
+    private TypeElement findJackstaffProto(TypeElement ele) {
+        List<TypeElement> list = new ArrayList<>();
+        Element parent = ele.getEnclosingElement();
+        while (parent.getKind() == ElementKind.CLASS) {
+            list.add((TypeElement) parent);
+            parent = parent.getEnclosingElement();
+        }
+        Collections.reverse(list);
+        return list.stream().filter(this::isJackstaffProto).findFirst().orElse(null);
     }
 
-    public void build(){
+    public TypeElement getJackstaffParent(TypeElement protoElement) {
+        String name = parents.get(protoElement);
+        if (name == null){
+            TypeElement ele = findJackstaffProto(protoElement);
+            parents.put(ele, Optional.ofNullable(ele).map(Object::toString).orElse(""));
+            return ele;
+        }
+        return jackstaffProto(name);
+    }
+
+    public boolean prepare(){
+        int size = infos.size();
         List<TypeElement> protos = parents.values().stream().map(this::jackstaffProto).
                 filter(Objects::nonNull).distinct().collect(Collectors.toList());
         protos.forEach(p->p.getEnclosedElements().stream().filter(e->e instanceof TypeElement).
@@ -129,7 +143,16 @@ class TransFormInfos {
         List<TransFormInfo> roots = infos.values().stream().filter(t->t.getParent() ==null).collect(Collectors.toList());
         roots.forEach(TransFormInfo::prepare);
         roots.forEach(TransFormInfo::build);
+        return infos.size() > size;
+    }
 
+    public void build(){
+        boolean next = prepare();
+        while (next){
+            next = prepare();
+        }
+        List<TypeElement> protos = parents.values().stream().map(this::jackstaffProto).
+                filter(Objects::nonNull).distinct().collect(Collectors.toList());
         Map<String, List<TransFormInfo>> packs= infos.values().stream().filter(info->info.getBuilder() != null).
                 collect(Collectors.groupingBy(TransFormInfo::packageName));
         if (!packs.isEmpty()) {

@@ -12,7 +12,7 @@ import java.util.Optional;
 public class LoggerInfo implements Interceptor {
 
     @Override
-    public void before(Context context) throws Exception {
+    public void before(Context context) {
         context.setAttribute(this, System.nanoTime());
         Optional.ofNullable(LoggerFactory.getLogger(context.getType())).filter(Logger::isInfoEnabled).ifPresent(logger ->
             logger.info("BEFORE: {}.{}", context.getType().getName(), context.getMethod().getName())
