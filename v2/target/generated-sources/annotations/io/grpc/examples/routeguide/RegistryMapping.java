@@ -27,6 +27,12 @@ class RegistryMapping {
         registry.register();
     }
     static {
+        TransFormRegistry<Feature, RouteGuideProto.Feature, RouteGuideProto.Feature.Builder> registry = new TransFormRegistry<>(Feature.class, Feature::new, RouteGuideProto.Feature.class, RouteGuideProto.Feature.Builder::build, RouteGuideProto.Feature::newBuilder);
+        registry.string(Feature::hasName, Feature::getName, Feature::setName, RouteGuideProto.Feature::getName, RouteGuideProto.Feature.Builder::setName);
+        registry.value(Point.class, Feature::hasLocation, Feature::getLocation, Feature::setLocation, RouteGuideProto.Feature::hasLocation, RouteGuideProto.Feature::getLocation, RouteGuideProto.Feature.Builder::setLocation);
+        registry.register();
+    }
+    static {
         TransFormRegistry<Rectangle, RouteGuideProto.Rectangle, RouteGuideProto.Rectangle.Builder> registry = new TransFormRegistry<>(Rectangle.class, Rectangle::new, RouteGuideProto.Rectangle.class, RouteGuideProto.Rectangle.Builder::build, RouteGuideProto.Rectangle::newBuilder);
         registry.value(Point.class, Rectangle::hasLo, Rectangle::getLo, Rectangle::setLo, RouteGuideProto.Rectangle::hasLo, RouteGuideProto.Rectangle::getLo, RouteGuideProto.Rectangle.Builder::setLo);
         registry.value(Point.class, Rectangle::hasHi, Rectangle::getHi, Rectangle::setHi, RouteGuideProto.Rectangle::hasHi, RouteGuideProto.Rectangle::getHi, RouteGuideProto.Rectangle.Builder::setHi);
@@ -36,12 +42,6 @@ class RegistryMapping {
         TransFormRegistry<RouteNote, RouteGuideProto.RouteNote, RouteGuideProto.RouteNote.Builder> registry = new TransFormRegistry<>(RouteNote.class, RouteNote::new, RouteGuideProto.RouteNote.class, RouteGuideProto.RouteNote.Builder::build, RouteGuideProto.RouteNote::newBuilder);
         registry.value(Point.class, RouteNote::hasLocation, RouteNote::getLocation, RouteNote::setLocation, RouteGuideProto.RouteNote::hasLocation, RouteGuideProto.RouteNote::getLocation, RouteGuideProto.RouteNote.Builder::setLocation);
         registry.string(RouteNote::hasMessage, RouteNote::getMessage, RouteNote::setMessage, RouteGuideProto.RouteNote::getMessage, RouteGuideProto.RouteNote.Builder::setMessage);
-        registry.register();
-    }
-    static {
-        TransFormRegistry<Feature, RouteGuideProto.Feature, RouteGuideProto.Feature.Builder> registry = new TransFormRegistry<>(Feature.class, Feature::new, RouteGuideProto.Feature.class, RouteGuideProto.Feature.Builder::build, RouteGuideProto.Feature::newBuilder);
-        registry.string(Feature::hasName, Feature::getName, Feature::setName, RouteGuideProto.Feature::getName, RouteGuideProto.Feature.Builder::setName);
-        registry.value(Point.class, Feature::hasLocation, Feature::getLocation, Feature::setLocation, RouteGuideProto.Feature::hasLocation, RouteGuideProto.Feature::getLocation, RouteGuideProto.Feature.Builder::setLocation);
         registry.register();
     }
 

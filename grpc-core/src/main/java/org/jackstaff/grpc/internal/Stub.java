@@ -49,7 +49,7 @@ public final class Stub<S extends AbstractStub<S>, ReqT, RespT> {
     public Stub(String authority, ManagedChannel channel, Duration defaultTimeout) {
         this.authority = authority;
         this.channel = channel;
-        this.defaultTimeout = defaultTimeout;
+        this.defaultTimeout = Optional.ofNullable(defaultTimeout).orElse(Duration.ZERO);
     }
 
     @SuppressWarnings("unchecked")

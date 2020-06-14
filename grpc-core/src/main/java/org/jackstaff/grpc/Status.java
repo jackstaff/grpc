@@ -177,6 +177,10 @@ public class Status {
         return Code.OK == code;
     }
 
+    public boolean isMessage() {
+        return Code.MESSAGE == code;
+    }
+
     static io.grpc.Status buildStatus(int code, String description, Throwable cause, Metadata trailers){
         io.grpc.Status status = io.grpc.Status.fromCodeValue(code).withDescription(description).withCause(cause);
         if (status.getCode().value() != code) {

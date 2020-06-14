@@ -4,6 +4,9 @@ spring:
 #    server:
 #      port: 8000
     client:
+      SkyWalking:
+        host: data.iotspacex.com
+        port: 6000
       demo-server:
         host: localhost
         port: 9000

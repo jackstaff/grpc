@@ -22,6 +22,7 @@ import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.ProtocolMessageEnum;
 import com.squareup.javapoet.ClassName;
 import org.jackstaff.grpc.TransFormRegistry;
+import org.jackstaff.grpc.internal.PropertyKind;
 
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -207,8 +208,11 @@ class TransFormInfos {
                 map(RegistryMapping::selfClassName).orElseGet(()->ClassName.get(TransFormRegistry.class));
     }
 
+    private final Set<String> WRAPPERS = Arrays.stream(PropertyKind.values()).filter(PropertyKind::isWrapper).
+            map(PropertyKind::rawType).map(Class::getCanonicalName).collect(Collectors.toSet());
+
     private boolean isMessageV3(TypeElement protoElement){
-        return types.isSameType(protoElement.getSuperclass(), messageV3.asType());
+        return types.isSameType(protoElement.getSuperclass(), messageV3.asType()) && !WRAPPERS.contains(protoElement.toString());
     }
 
     private boolean isMessageV3Builder(TypeElement protoElement){

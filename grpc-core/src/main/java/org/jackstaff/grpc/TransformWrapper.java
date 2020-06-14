@@ -69,37 +69,4 @@ class TransformWrapper<Pojo, Proto> implements Transform<Pojo, Proto> {
         return new MessageIterator<>(iterator::hasNext, ()->from.apply(iterator.next()), iterator);
     }
 
-    static Transform<?, ?> identity = new Transform<Object, Object>() {
-
-        @Override
-        public Object from(Object object) {
-            return object;
-        }
-
-        @Override
-        public Object build(Object object) {
-            return object;
-        }
-
-        @Override
-        public StreamObserver<Object> buildObserver(StreamObserver<Object> observer) {
-            return observer;
-        }
-
-        @Override
-        public StreamObserver<Object> fromObserver(StreamObserver<Object> observer) {
-            return observer;
-        }
-
-        @Override
-        public Iterator<Object> buildIterator(Iterator<Object> iterator) {
-            return iterator;
-        }
-
-        @Override
-        public Iterator<Object> fromIterator(Iterator<Object> iterator) {
-            return iterator;
-        }
-    };
-
 }

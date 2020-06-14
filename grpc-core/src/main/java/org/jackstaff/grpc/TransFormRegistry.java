@@ -151,7 +151,7 @@ public class TransFormRegistry<Pojo, Proto, Builder> {
 
     private <T, V> void value(PropertyKind kind, Predicate<Pojo> pojoHas, Function<Pojo, T> pojoGet, BiConsumer<Pojo, T> pojoSet,
                               Predicate<Proto> protoHas, Function<Proto, V> protoGet, BiConsumer<Builder, V> builderSet){
-        Transform<T, V> transform = getTransform(kind.rawType());
+        Transform<T, V> transform = hookTransform(kind.rawType());
         mapping(pojoHas, protoHas, (pojo, proto)->pojoSet.accept(pojo, transform.from(protoGet.apply(proto))),
                 (pojo, builder)->builderSet.accept(builder, transform.build(pojoGet.apply(pojo))));
     }
@@ -159,7 +159,7 @@ public class TransFormRegistry<Pojo, Proto, Builder> {
     public <T extends Enum<T>, P extends Enum<P>> void value(Class<T> enumType, Predicate<Pojo> pojoHas,
                                                                Function<Pojo, T> pojoGet, BiConsumer<Pojo, T> pojoSet,
                                                                Function<Proto, P> protoGet, BiConsumer<Builder, P> builderSet){
-        Transform<T, P> transform = getTransform(enumType);
+        Transform<T, P> transform = hookTransform(enumType);
         mapping(pojoHas, (pojo, proto)->pojoSet.accept(pojo, transform.from(protoGet.apply(proto))),
                 (pojo, builder)->builderSet.accept(builder, transform.build(pojoGet.apply(pojo))));
     }
@@ -167,7 +167,7 @@ public class TransFormRegistry<Pojo, Proto, Builder> {
     public <T, V> void value(Class<T> messageType,
                                Predicate<Pojo> pojoHas, Function<Pojo, T> pojoGet, BiConsumer<Pojo, T> pojoSet,
                                Predicate<Proto> protoHas, Function<Proto, V> protoGet, BiConsumer<Builder, V> builderSet){
-        Transform<T, V> transform = getTransform(messageType);
+        Transform<T, V> transform = hookTransform(messageType);
         mapping(pojoHas, protoHas, (pojo, proto)->pojoSet.accept(pojo, transform.from(protoGet.apply(proto))),
                 (pojo, builder)->builderSet.accept(builder, transform.build(pojoGet.apply(pojo))));
     }
@@ -183,7 +183,7 @@ public class TransFormRegistry<Pojo, Proto, Builder> {
     public <T, V> void list(Class<T> elementType, Predicate<Pojo> pojoHas,
                                Function<Pojo, List<T>> pojoGet, BiConsumer<Pojo, List<T>> pojoSet,
                                Function<Proto, List<V>> protoGet, BiConsumer<Builder, Iterable<V>> builderSet){
-        Transform<T, V> transform = getTransform(elementType);
+        Transform<T, V> transform = hookTransform(elementType);
         froms.add((pojo, proto)-> Optional.ofNullable(protoGet.apply(proto)).ifPresent(list->
                 pojoSet.accept(pojo, list.stream().map(transform::from).collect(Collectors.toList()))));
         builds.add((pojo, builder)->{
@@ -259,7 +259,7 @@ public class TransFormRegistry<Pojo, Proto, Builder> {
     private <T, V> void list(PropertyKind kind, Predicate<Pojo> pojoHas,
                              Function<Pojo, List<T>> pojoGet, BiConsumer<Pojo, List<T>> pojoSet,
                              Function<Proto, List<V>> protoGet, BiConsumer<Builder, Iterable<V>> builderSet){
-        Transform<T, V> transform = getTransform(kind.rawType());
+        Transform<T, V> transform = hookTransform(kind.rawType());
         froms.add((pojo, proto)-> Optional.ofNullable(protoGet.apply(proto)).ifPresent(list->
                 pojoSet.accept(pojo, list.stream().map(transform::from).collect(Collectors.toList()))));
         builds.add((pojo, builder)->{
@@ -330,7 +330,11 @@ public class TransFormRegistry<Pojo, Proto, Builder> {
         }
     }
 
-    private static <Pojo, Proto> Transform<Pojo, Proto> getTransform(Class<?> type){
+    public static <Pojo, Proto> Transform<Pojo, Proto> getTransform(Class<?> type){
+        return Transforms.getTransform(type);
+    }
+
+    private static <Pojo, Proto> Transform<Pojo, Proto> hookTransform(Class<?> type){
         return Transforms.hasTransform(type) ? Transforms.getTransform(type) : new DeferredTransform<>(type);
     }
 
@@ -345,7 +349,7 @@ public class TransFormRegistry<Pojo, Proto, Builder> {
 
         private Transform<Pojo, Proto> get() {
             if (transform == null){
-                transform = Transforms.getTransform(type);
+                transform = Transforms.getOrIdentityTransform(type);
             }
             return transform;
         }
@@ -445,77 +449,77 @@ public class TransFormRegistry<Pojo, Proto, Builder> {
 
         public OneOfCase<PojoE, ProtoE> doubleValue(PojoE enumerate, Function<Pojo, Double> pojoGet, BiConsumer<Pojo, Double> pojoSet,
                                 Function<Proto, DoubleValue> protoGet, BiConsumer<Builder, DoubleValue> builderSet){
-            Transform<Double, DoubleValue> transform = getTransform(DoubleValue.class);
+            Transform<Double, DoubleValue> transform = hookTransform(DoubleValue.class);
             return mapping(enumerate, (pojo, proto)-> pojoSet.accept(pojo, transform.from(protoGet.apply(proto))),
                     (pojo, builder)->builderSet.accept(builder, transform.build(pojoGet.apply(pojo))));
         }
 
         public OneOfCase<PojoE, ProtoE> floatValue(PojoE enumerate, Function<Pojo, Float> pojoGet, BiConsumer<Pojo, Float> pojoSet,
                                Function<Proto, FloatValue> protoGet, BiConsumer<Builder, FloatValue> builderSet){
-            Transform<Float, FloatValue> transform = getTransform(FloatValue.class);
+            Transform<Float, FloatValue> transform = hookTransform(FloatValue.class);
             return mapping(enumerate, (pojo, proto)-> pojoSet.accept(pojo, transform.from(protoGet.apply(proto))),
                     (pojo, builder)->builderSet.accept(builder, transform.build(pojoGet.apply(pojo))));
         }
 
         public OneOfCase<PojoE, ProtoE> int32Value(PojoE enumerate, Function<Pojo, Integer> pojoGet, BiConsumer<Pojo, Integer> pojoSet,
                                Function<Proto, Int32Value> protoGet, BiConsumer<Builder, Int32Value> builderSet){
-            Transform<Integer, Int32Value> transform = getTransform(Int32Value.class);
+            Transform<Integer, Int32Value> transform = hookTransform(Int32Value.class);
             return mapping(enumerate, (pojo, proto)-> pojoSet.accept(pojo, transform.from(protoGet.apply(proto))),
                     (pojo, builder)->builderSet.accept(builder, transform.build(pojoGet.apply(pojo))));
         }
 
         public OneOfCase<PojoE, ProtoE> int64Value(PojoE enumerate, Function<Pojo, Long> pojoGet, BiConsumer<Pojo, Long> pojoSet,
                                Function<Proto, Int64Value> protoGet, BiConsumer<Builder, Int64Value> builderSet){
-            Transform<Long, Int64Value> transform = getTransform(Int64Value.class);
+            Transform<Long, Int64Value> transform = hookTransform(Int64Value.class);
             return mapping(enumerate, (pojo, proto)-> pojoSet.accept(pojo, transform.from(protoGet.apply(proto))),
                     (pojo, builder)->builderSet.accept(builder, transform.build(pojoGet.apply(pojo))));
         }
 
         public OneOfCase<PojoE, ProtoE> uint32Value(PojoE enumerate, Function<Pojo, Integer> pojoGet, BiConsumer<Pojo, Integer> pojoSet,
                                 Function<Proto, UInt32Value> protoGet, BiConsumer<Builder, UInt32Value> builderSet){
-            Transform<Integer, UInt32Value> transform = getTransform(UInt32Value.class);
+            Transform<Integer, UInt32Value> transform = hookTransform(UInt32Value.class);
             return mapping(enumerate, (pojo, proto)-> pojoSet.accept(pojo, transform.from(protoGet.apply(proto))),
                     (pojo, builder)->builderSet.accept(builder, transform.build(pojoGet.apply(pojo))));
         }
 
         public OneOfCase<PojoE, ProtoE> uint64Value(PojoE enumerate, Function<Pojo, Long> pojoGet, BiConsumer<Pojo, Long> pojoSet,
                                 Function<Proto, UInt64Value> protoGet, BiConsumer<Builder, UInt64Value> builderSet){
-            Transform<Long, UInt64Value> transform = getTransform(UInt64Value.class);
+            Transform<Long, UInt64Value> transform = hookTransform(UInt64Value.class);
             return mapping(enumerate, (pojo, proto)-> pojoSet.accept(pojo, transform.from(protoGet.apply(proto))),
                     (pojo, builder)->builderSet.accept(builder, transform.build(pojoGet.apply(pojo))));
         }
 
         public OneOfCase<PojoE, ProtoE> boolValue(PojoE enumerate, Function<Pojo, Boolean> pojoGet, BiConsumer<Pojo, Boolean> pojoSet,
                               Function<Proto, BoolValue> protoGet, BiConsumer<Builder, BoolValue> builderSet){
-            Transform<Boolean, BoolValue> transform = getTransform(BoolValue.class);
+            Transform<Boolean, BoolValue> transform = hookTransform(BoolValue.class);
             return mapping(enumerate, (pojo, proto)-> pojoSet.accept(pojo, transform.from(protoGet.apply(proto))),
                     (pojo, builder)->builderSet.accept(builder, transform.build(pojoGet.apply(pojo))));
         }
 
         public OneOfCase<PojoE, ProtoE> duration(PojoE enumerate, Function<Pojo, java.time.Duration> pojoGet, BiConsumer<Pojo, java.time.Duration> pojoSet,
                              Function<Proto, Duration> protoGet, BiConsumer<Builder, Duration> builderSet){
-            Transform<java.time.Duration, Duration> transform = getTransform(Duration.class);
+            Transform<java.time.Duration, Duration> transform = hookTransform(Duration.class);
             return mapping(enumerate, (pojo, proto)-> pojoSet.accept(pojo, transform.from(protoGet.apply(proto))),
                     (pojo, builder)->builderSet.accept(builder, transform.build(pojoGet.apply(pojo))));
         }
 
         public OneOfCase<PojoE, ProtoE> timestamp(PojoE enumerate, Function<Pojo, java.sql.Timestamp> pojoGet, BiConsumer<Pojo, java.sql.Timestamp> pojoSet,
                               Function<Proto, Timestamp> protoGet, BiConsumer<Builder, Timestamp> builderSet){
-            Transform<java.sql.Timestamp, Timestamp> transform = getTransform(Timestamp.class);
+            Transform<java.sql.Timestamp, Timestamp> transform = hookTransform(Timestamp.class);
             return mapping(enumerate, (pojo, proto)-> pojoSet.accept(pojo, transform.from(protoGet.apply(proto))),
                     (pojo, builder)->builderSet.accept(builder, transform.build(pojoGet.apply(pojo))));
         }
 
         public OneOfCase<PojoE, ProtoE> stringValue(PojoE enumerate, Function<Pojo, String> pojoGet, BiConsumer<Pojo, String> pojoSet,
                                 Function<Proto, StringValue> protoGet, BiConsumer<Builder, StringValue> builderSet){
-            Transform<String, StringValue> transform = getTransform(StringValue.class);
+            Transform<String, StringValue> transform = hookTransform(StringValue.class);
             return mapping(enumerate, (pojo, proto)-> pojoSet.accept(pojo, transform.from(protoGet.apply(proto))),
                     (pojo, builder)->builderSet.accept(builder, transform.build(pojoGet.apply(pojo))));
         }
 
         public OneOfCase<PojoE, ProtoE> bytesValue(PojoE enumerate, Function<Pojo, byte[]> pojoGet, BiConsumer<Pojo, byte[]> pojoSet,
                                Function<Proto, BytesValue> protoGet, BiConsumer<Builder, BytesValue> builderSet){
-            Transform<byte[], BytesValue> transform = getTransform(BytesValue.class);
+            Transform<byte[], BytesValue> transform = hookTransform(BytesValue.class);
             return mapping(enumerate, (pojo, proto)-> pojoSet.accept(pojo, transform.from(protoGet.apply(proto))),
                     (pojo, builder)->builderSet.accept(builder, transform.build(pojoGet.apply(pojo))));
         }
@@ -524,7 +528,7 @@ public class TransFormRegistry<Pojo, Proto, Builder> {
         public <T, V> OneOfCase<PojoE, ProtoE> mapping(PojoE enumerate, Class<T> messageType,
                                                        Function<Pojo, T> pojoGet, BiConsumer<Pojo, T> pojoSet,
                                                        Function<Proto, V> protoGet, BiConsumer<Builder, V> builderSet){
-            Transform<T, V> transform = getTransform(messageType);
+            Transform<T, V> transform = hookTransform(messageType);
             return mapping(enumerate, (pojo, proto)-> pojoSet.accept(pojo, transform.from(protoGet.apply(proto))),
                     (pojo, builder)->builderSet.accept(builder, transform.build(pojoGet.apply(pojo))));
         }

@@ -5,10 +5,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.jackstaff.grpc</groupId>
-    <artifactId>grpc-generator</artifactId>
+    <artifactId>grpc-android</artifactId>
     <version>2.0.11</version>
-    <name>grpc-generator</name>
-    <description>Jackstaff gRPC framework, Smooth and friendly use of gRPC, Code Generator</description>
+    <name>grpc-android</name>
+    <description>Jackstaff gRPC framework, Smooth and friendly use of gRPC, android client</description>
     <url>https://github.com/jackstaff/grpc</url>
     <packaging>jar</packaging>
 
@@ -28,28 +28,52 @@
             <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
     </distributionManagement>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-bom</artifactId>
+                <version>${grpc.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
             <groupId>org.jackstaff.grpc</groupId>
             <artifactId>grpc-core</artifactId>
             <version>${jackstaff.grpc.version}</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/com.google.auto.service/auto-service -->
-        <dependency>
-            <groupId>com.google.auto.service</groupId>
-            <artifactId>auto-service</artifactId>
-            <version>1.0-rc6</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/com.squareup/javapoet -->
-        <dependency>
-            <groupId>com.squareup</groupId>
-            <artifactId>javapoet</artifactId>
-            <version>1.12.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.grpc</groupId>
+                    <artifactId>grpc-netty-shaded</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.protostuff</groupId>
+                    <artifactId>protostuff-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.protostuff</groupId>
+                    <artifactId>protostuff-runtime</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-protobuf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-stub</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-okhttp</artifactId>
+        </dependency>
     </dependencies>
-
 
     <build>
         <plugins>

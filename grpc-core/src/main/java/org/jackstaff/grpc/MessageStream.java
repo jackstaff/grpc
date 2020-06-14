@@ -72,7 +72,7 @@ public final class MessageStream<T> implements Consumer<T> {
             return (MessageStream<T>) consumer;
         }
         return new MessageStream<>(t->{
-            if (t.getCode() == Status.Code.MESSAGE){
+            if (t.isMessage()){
                 consumer.accept(t.getMessage());
             }
         });

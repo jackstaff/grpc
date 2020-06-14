@@ -94,24 +94,24 @@ public final class MethodDescriptor {
         }
         switch (this.methodType){
             case UNARY:
-                this.requestTransform = Transforms.getTransform(method.getParameterTypes()[0]);
-                this.responseTransform = Transforms.getTransform(method.getReturnType());
+                this.requestTransform = Transforms.getOrIdentityTransform(method.getParameterTypes()[0]);
+                this.responseTransform = Transforms.getOrIdentityTransform(method.getReturnType());
                 break;
             case BLOCKING_SERVER_STREAMING:
                 //it's default + overload
-                this.requestTransform = Transforms.getTransform(method.getParameterTypes()[0]);
-                this.responseTransform = Transforms.getTransform(genericReturnType(method));
+                this.requestTransform = Transforms.getOrIdentityTransform(method.getParameterTypes()[0]);
+                this.responseTransform = Transforms.getOrIdentityTransform(genericReturnType(method));
                 break;
             case ASYNCHRONOUS_UNARY:
                 //it's default,will call peer method (unary), transform same as server streaming.
             case SERVER_STREAMING:
-                this.requestTransform = Transforms.getTransform(method.getParameterTypes()[0]);
-                this.responseTransform = Transforms.getTransform(genericParameter(method, 1));
+                this.requestTransform = Transforms.getOrIdentityTransform(method.getParameterTypes()[0]);
+                this.responseTransform = Transforms.getOrIdentityTransform(genericParameter(method, 1));
                 break;
             case CLIENT_STREAMING:
             case BIDI_STREAMING:
-                this.requestTransform = Transforms.getTransform(genericReturnType(method));
-                this.responseTransform = Transforms.getTransform(genericParameter(method, 0));
+                this.requestTransform = Transforms.getOrIdentityTransform(genericReturnType(method));
+                this.responseTransform = Transforms.getOrIdentityTransform(genericParameter(method, 0));
                 break;
         }
     }

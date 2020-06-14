@@ -57,7 +57,7 @@ class PacketServerBinder extends InternalGrpc.InternalImplBase {
 
     @Override
     public void unary(InternalProto.Packet request, StreamObserver<InternalProto.Packet> observer) {
-        Transform<Packet<?>, InternalProto.Packet> transform= Transforms.getTransform(Packet.class);
+        Transform<Packet<?>, InternalProto.Packet> transform= Transforms.getOrIdentityTransform(Packet.class);
         try {
             Context context = buildContext(transform.from(request));
             MethodDescriptor descriptor = context.getMethodDescriptor();
@@ -75,7 +75,7 @@ class PacketServerBinder extends InternalGrpc.InternalImplBase {
 
     @Override
     public void serverStreaming(InternalProto.Packet request, StreamObserver<InternalProto.Packet> observer) {
-        Transform<Packet<?>, InternalProto.Packet> transform= Transforms.getTransform(Packet.class);
+        Transform<Packet<?>, InternalProto.Packet> transform= Transforms.getOrIdentityTransform(Packet.class);
         MessageStream<?> respStream = new MessageStream<>(new MessageObserver<>(transform.fromObserver(observer)));
         try {
             Context context = buildContext(transform.from(request)).setStream(respStream);
@@ -91,7 +91,7 @@ class PacketServerBinder extends InternalGrpc.InternalImplBase {
 
     @SuppressWarnings("unchecked")
     public StreamObserver<InternalProto.Packet> clientStreaming(StreamObserver<InternalProto.Packet> observer) {
-        Transform<Packet<?>, InternalProto.Packet> transform= Transforms.getTransform(Packet.class);
+        Transform<Packet<?>, InternalProto.Packet> transform= Transforms.getOrIdentityTransform(Packet.class);
         MessageStream<?> respStream = new MessageStream<>(new MessageObserver<>(transform.fromObserver(observer))).unary();
         try {
             Packet<?> packet = transform.from(InternalProto.Packet.newBuilder().setData(ByteString.copyFrom(HeaderMetadata.BINARY_ROOT.getValue())).build());
@@ -111,7 +111,7 @@ class PacketServerBinder extends InternalGrpc.InternalImplBase {
 
     @SuppressWarnings("unchecked")
     public StreamObserver<InternalProto.Packet> bidiStreaming(StreamObserver<InternalProto.Packet> observer) {
-        Transform<Packet<?>, InternalProto.Packet> transform= Transforms.getTransform(Packet.class);
+        Transform<Packet<?>, InternalProto.Packet> transform= Transforms.getOrIdentityTransform(Packet.class);
         MessageStream<?> respStream = new MessageStream<>(new MessageObserver<>(transform.fromObserver(observer)));
         try {
             Packet<?> packet = transform.from(InternalProto.Packet.newBuilder().setData(ByteString.copyFrom(HeaderMetadata.BINARY_ROOT.getValue())).build());

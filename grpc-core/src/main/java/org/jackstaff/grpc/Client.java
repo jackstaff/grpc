@@ -94,39 +94,41 @@ public class Client {
         this.creator = creator;
     }
 
-    /**
-     * setup the client stub
-     *
-     * @param authorityClients the config
-     */
     public void setup(Map<String, ClientConfig> authorityClients) {
-        authorityClients.forEach((authority, cfg) -> {
-            ManagedChannelBuilder<?> builder = ManagedChannelBuilder.forAddress(cfg.getHost(), cfg.getPort());
-            if (cfg.getKeepAliveTime() > 0) {
-                builder.keepAliveTime(cfg.getKeepAliveTime(), TimeUnit.SECONDS);
-                builder.keepAliveWithoutCalls(cfg.isKeepAliveWithoutCalls());
-            }
-            if (cfg.getIdleTimeout() > 300) {
-                builder.idleTimeout(cfg.getIdleTimeout(), TimeUnit.SECONDS);
-            }
-            if (cfg.getKeepAliveTimeout() > 30) {
-                builder.keepAliveTimeout(cfg.getKeepAliveTimeout(), TimeUnit.SECONDS);
-            }
-            if (cfg.getMaxRetryAttempts() > 0) {
-                builder.enableRetry().maxRetryAttempts(cfg.getMaxRetryAttempts());
-            }
-            if (cfg.isPlaintext()) {
-                builder.usePlaintext();
-            }
-            if (cfg.getMaxInboundMessageSize() > 512 * 1024) {
-                builder.maxInboundMessageSize(cfg.getMaxInboundMessageSize());
-            }
-            stubs.put(authority, new Stub<>(authority, builder.build(), Duration.ofSeconds(cfg.getDefaultTimeout())));
-        });
+        authorityClients.forEach(this::setup);
     }
 
-    public <T> T autowired(String authority, Class<T> type, List<Interceptor> interceptors) {
-        return autowired(authority, type, true, interceptors);
+    /**
+     * setup the client stub
+     * @param authority authority
+     * @param cfg client config
+     */
+    public void setup(String authority, ClientConfig cfg) {
+        ManagedChannelBuilder<?> builder = ManagedChannelBuilder.forAddress(cfg.getHost(), cfg.getPort());
+        if (cfg.getKeepAliveTime() > 0) {
+            builder.keepAliveTime(cfg.getKeepAliveTime(), TimeUnit.SECONDS);
+            builder.keepAliveWithoutCalls(cfg.isKeepAliveWithoutCalls());
+        }
+        if (cfg.getIdleTimeout() > 300) {
+            builder.idleTimeout(cfg.getIdleTimeout(), TimeUnit.SECONDS);
+        }
+        if (cfg.getKeepAliveTimeout() > 30) {
+            builder.keepAliveTimeout(cfg.getKeepAliveTimeout(), TimeUnit.SECONDS);
+        }
+        if (cfg.getMaxRetryAttempts() > 0) {
+            builder.enableRetry().maxRetryAttempts(cfg.getMaxRetryAttempts());
+        }
+        if (cfg.isPlaintext()) {
+            builder.usePlaintext();
+        }
+        if (cfg.getMaxInboundMessageSize() > 512 * 1024) {
+            builder.maxInboundMessageSize(cfg.getMaxInboundMessageSize());
+        }
+        stubs.put(authority, new Stub<>(authority, builder.build(), Duration.ofSeconds(cfg.getDefaultTimeout())));
+    }
+
+    public <T> T autowired(String authority, Class<T> type) {
+        return autowired(authority, type, true, null);
     }
 
     /**
@@ -144,7 +146,7 @@ public class Client {
         Stub<?,?,?> prototype = stubs.get(authority);
         if (prototype == null) {
             if (required) {
-                throw new ValidationException("client " + authority + " NOT found in configuration: spring.grpc.client..");
+                throw new ValidationException("client " + authority + " NOT found in configuration..like.. spring.grpc.client..");
             }
             return null;
         }
@@ -163,7 +165,7 @@ public class Client {
                     return null;
                 }
             }
-            return walkThrough(prototype, methods.get(new MethodKey(type, method)), proxy, args, interceptors);
+            return walkThrough(prototype, methods.get(new MethodKey(type, method)), proxy, args, Optional.ofNullable(interceptors).orElseGet(ArrayList::new));
         });
         return (T) bean;
     }
@@ -236,7 +238,7 @@ public class Client {
     }
 
     private Packet<?> v1StubCall(Context context, Stub<?,Packet<?>,Packet<?>> stub) {
-        Transform<Packet<?>, InternalProto.Packet> transform= Transforms.getTransform(Packet.class);
+        Transform<Packet<?>, InternalProto.Packet> transform= Transforms.getOrIdentityTransform(Packet.class);
         MethodDescriptor descriptor = context.getMethodDescriptor();
         switch (descriptor.getMethodType()) {
             case UNARY: {

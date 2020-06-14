@@ -34,6 +34,14 @@ public class ClientConfig {
     private boolean plaintext=true;
     private int defaultTimeout;
 
+    public ClientConfig() {
+    }
+
+    public ClientConfig(String host, int port) {
+        this.host = host;
+        this.port = port;
+    }
+
     public String getHost() {
         return host;
     }

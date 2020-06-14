@@ -21,6 +21,7 @@ import org.jackstaff.grpc.MethodType;
 import java.lang.annotation.*;
 
 /**
+ * @see MethodType
  * @author reco@jackstaff.org
  */
 

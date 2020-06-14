@@ -18,8 +18,10 @@ package org.jackstaff.grpc;
 
 import com.google.protobuf.*;
 import io.grpc.ServiceDescriptor;
+import io.grpc.stub.StreamObserver;
 import org.jackstaff.grpc.internal.Serializer;
 
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -84,8 +86,7 @@ class Transforms {
     }
 
     static boolean hasTransform(Class<?> type){
-        return Optional.ofNullable(transforms.get(type)).
-                map(tf->!Objects.equals(tf, TransformWrapper.identity)).orElse(false);
+        return Optional.ofNullable(transforms.get(type)).map(tf->!Objects.equals(tf, IDENTITY)).orElse(false);
     }
 
     static Transform<?, ?> getPacketTransform(){
@@ -97,7 +98,46 @@ class Transforms {
 
     @SuppressWarnings("unchecked")
     public static <Pojo, Proto> Transform<Pojo, Proto> getTransform(Class<?> type){
-        return (Transform<Pojo, Proto>)transforms.computeIfAbsent(type, k-> TransformWrapper.identity);
+        return (Transform<Pojo, Proto>)transforms.get(type);
     }
+
+    @SuppressWarnings("unchecked")
+    public static <Pojo, Proto> Transform<Pojo, Proto> getOrIdentityTransform(Class<?> type){
+        return (Transform<Pojo, Proto>)transforms.getOrDefault(type, IDENTITY);
+    }
+
+    public static final Transform<?, ?> IDENTITY = new Transform<Object, Object>() {
+
+        @Override
+        public Object from(Object object) {
+            return object;
+        }
+
+        @Override
+        public Object build(Object object) {
+            return object;
+        }
+
+        @Override
+        public StreamObserver<Object> buildObserver(StreamObserver<Object> observer) {
+            return observer;
+        }
+
+        @Override
+        public StreamObserver<Object> fromObserver(StreamObserver<Object> observer) {
+            return observer;
+        }
+
+        @Override
+        public Iterator<Object> buildIterator(Iterator<Object> iterator) {
+            return iterator;
+        }
+
+        @Override
+        public Iterator<Object> fromIterator(Iterator<Object> iterator) {
+            return iterator;
+        }
+    };
+
 
 }
