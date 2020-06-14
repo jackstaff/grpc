@@ -12,7 +12,7 @@ Step 0: Import grpc-spring-boot-starter in pom.xml
 <dependency>
     <groupId>org.jackstaff.grpc</groupId>
     <artifactId>grpc-spring-boot-starter</artifactId>
-    <version>2.0.10</version>
+    <version>2.0.11</version>
 </dependency>
 
 ```
