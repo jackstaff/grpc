@@ -39,7 +39,7 @@ public final class MessageStream<T> implements Consumer<T> {
     private Duration timeout;
 
     private boolean unary;
-    private AtomicReference<Status> status = new AtomicReference<>(Status.OK);
+    private AtomicReference<Status> status = new AtomicReference<>();
 
     /**
      * deadline not set, it will use client config's default timeout if set
@@ -145,7 +145,7 @@ public final class MessageStream<T> implements Consumer<T> {
      * @return indicate the stream closed status.
      */
     public boolean isClosed() {
-        return !status.get().isOk();
+        return status.get() != null;
     }
 
     /**
@@ -153,7 +153,7 @@ public final class MessageStream<T> implements Consumer<T> {
      * @return indicate the stream status.
      */
     public Status getStatus() {
-        return status.get();
+        return Optional.ofNullable(status.get()).orElse(Status.UNKNOWN);
     }
 
     MessageStream<T> unary() {
@@ -179,7 +179,7 @@ public final class MessageStream<T> implements Consumer<T> {
     public String toString() {
         return "MessageStream{" +
                 "isClosed=" + isClosed() +
-                ", status=" + status.get().codeName() +
+                ", status=" + getStatus().codeName() +
                 '}';
     }
 

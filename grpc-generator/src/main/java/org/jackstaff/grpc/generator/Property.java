@@ -234,16 +234,6 @@ class Property {
                             oneOfCase.fieldName(), oneOfCase.typeName(), oneOfCase.enumName(name),
                             TypeName.get(kind.boxingType()), oneOfCase.refFieldName(), kind.defaultValue());
                     break;
-//                case STRING:
-//                    spec.addStatement("return this.$N == $T.$N ? ($T)$N : $N",
-//                            oneOfCase.fieldName(), oneOfCase.typeName(), oneOfCase.enumName(name),
-//                            typeName(), oneOfCase.refFieldName(), kind.defaultValue());
-//                    break;
-//                case BYTES:
-//                    spec.addStatement("return this.$N == $T.$N ? ($T)$N : new byte[0]",
-//                            oneOfCase.fieldName(), oneOfCase.typeName(), oneOfCase.enumName(name),
-//                            typeName(), oneOfCase.refFieldName());
-//                    break;
                 case ENUM:
                     if (kind == PropertyKind.ONE_OF_CASE){
                         transForms.error("NEVER: ONE_OF_CASE's ONE_OF_CASE");

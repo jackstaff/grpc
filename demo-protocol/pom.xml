@@ -11,7 +11,7 @@
 
     <properties>
         <java.version>1.8</java.version>
-        <jackstaff.grpc.version>2.0.11</jackstaff.grpc.version>
+        <jackstaff.grpc.version>2.0.12</jackstaff.grpc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
