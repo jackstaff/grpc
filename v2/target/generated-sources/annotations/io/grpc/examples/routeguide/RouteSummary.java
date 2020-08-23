@@ -30,12 +30,22 @@ public class RouteSummary {
         this.pointCount = pointCount;
     }
 
+    public RouteSummary pointCount(int pointCount) {
+        this.setPointCount(pointCount);
+        return this;
+    }
+
     public int getFeatureCount() {
         return this.featureCount;
     }
 
     public void setFeatureCount(int featureCount) {
         this.featureCount = featureCount;
+    }
+
+    public RouteSummary featureCount(int featureCount) {
+        this.setFeatureCount(featureCount);
+        return this;
     }
 
     public int getDistance() {
@@ -46,11 +56,32 @@ public class RouteSummary {
         this.distance = distance;
     }
 
+    public RouteSummary distance(int distance) {
+        this.setDistance(distance);
+        return this;
+    }
+
     public int getElapsedTime() {
         return this.elapsedTime;
     }
 
     public void setElapsedTime(int elapsedTime) {
         this.elapsedTime = elapsedTime;
+    }
+
+    public RouteSummary elapsedTime(int elapsedTime) {
+        this.setElapsedTime(elapsedTime);
+        return this;
+    }
+
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("RouteSummary{");
+        builder.append("  pointCount=").append(this.pointCount);
+        builder.append("  featureCount=").append(this.featureCount);
+        builder.append("  distance=").append(this.distance);
+        builder.append("  elapsedTime=").append(this.elapsedTime);
+        builder.append('}');
+        return builder.toString();
     }
 }

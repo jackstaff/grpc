@@ -40,6 +40,7 @@ class Property {
     private static final Function<String, String> fHas = s -> "has" + s;
     private static final Function<String, String> fGet = s -> "get" + s;
     private static final Function<String, String> fSet = s -> "set" + s;
+    private static final Function<String, String> fLinkSet = s -> s.substring(0,1).toLowerCase()+s.substring(1);
     private static final Function<String, String> fBytes = s -> "get" + s + "Bytes";
     private static final Function<String, String> fValue = s -> "get" + s + "Value";
     private static final Function<String, String> fValueList = s -> "get" + s + "ValueList";
@@ -259,6 +260,59 @@ class Property {
         builder.addMethod(spec.build());
     }
 
+    @Override
+    public String toString() {
+        return "Property{" +
+                "name='" + name + '\'' +
+                ", kind=" + kind +
+                '}';
+    }
+
+    private void addToString(CodeBlock.Builder block) {
+        if (oneOfCase != null){
+            return;
+        }
+        if (kind == PropertyKind.ONE_OF_CASE){
+            block.beginControlFlow("if (this.$N !=null && this.$N != $T.$N)", fieldName(), fieldName(), typeName(), enumNameSpecial);
+            block.addStatement("builder.append(\"  $N=\").append(this.$N).append(\"=>\").append(this.$N)", fieldName(), fieldName(), refFieldName());
+            block.endControlFlow();
+            return;
+        }
+        switch (kind.category()) {
+            case PRIMITIVE:
+                block.addStatement("builder.append(\"  $N=\").append(this.$N)", fieldName(), fieldName());
+                break;
+            case STRING:
+                block.addStatement("if (this.$N()) builder.append(\"  $N='\").append(this.$N).append('\\'')", fHas.apply(name), fieldName(), fieldName());
+                break;
+            case BYTES:
+                block.addStatement("if (this.$N()) builder.append(\"  $N.length=\").append(this.$N.length)", fHas.apply(name), fieldName(), fieldName());
+                break;
+            case REPEATED:
+                block.addStatement("if (this.$N()) builder.append(\"  $N.size=\").append(this.$N.size())", fHas.apply(name), fieldName(), fieldName());
+                break;
+            case ENUM:
+            case MESSAGE:
+            case WRAPPER:
+                block.addStatement("if (this.$N()) builder.append(\"  $N=\").append(this.$N)", fHas.apply(name), fieldName(), fieldName());
+                break;
+            case UNRECOGNIZED:
+            default:
+                break;
+        }
+    }
+
+    private void addLinkSet(TransFormInfo transform, TypeSpec.Builder builder) {
+        if (oneOfCase != null || kind == PropertyKind.ONE_OF_CASE){
+            return;
+        }
+        MethodSpec.Builder spec = MethodSpec.methodBuilder(fLinkSet.apply(name)).addModifiers(Modifier.PUBLIC).
+                returns(transform.simpleClassName()).addParameter(typeName(), fieldName());
+        spec.addStatement("this.$N($N)", fSet.apply(name), fieldName());
+        spec.addStatement("return this");
+        builder.addMethod(spec.build());
+    }
+
     private void addSet(TypeSpec.Builder builder) {
         if (kind == PropertyKind.ONE_OF_CASE){
             return;
@@ -320,11 +374,12 @@ class Property {
         builder.addMethod(spec.build());
     }
 
-    private void build(TypeSpec.Builder builder) {
+    private void build(TransFormInfo transform, TypeSpec.Builder builder) {
         addField(builder);
         addHas(builder);
         addGet(builder);
         addSet(builder);
+        addLinkSet(transform, builder);
     }
 
     public static CodeBlock.Builder registryCodeBlock(TypeName typeName, TypeName protoTypeName, TypeName builderTypeName, Map<String, Property> properties){
@@ -457,7 +512,19 @@ class Property {
         }
     }
 
-    public static void build(TypeSpec.Builder builder, TransFormInfos transForms, Map<String, Property> properties) {
+    static void addToString(TransFormInfo transform, TypeSpec.Builder builder, Collection<Property> properties){
+        MethodSpec.Builder spec = MethodSpec.methodBuilder("toString").addModifiers(Modifier.PUBLIC).returns(String.class);
+        CodeBlock.Builder block = CodeBlock.builder();
+        block.addStatement("StringBuilder builder = new StringBuilder()");
+        block.addStatement("builder.append(\"$T{\")", transform.simpleClassName());
+        properties.forEach(p->p.addToString(block));
+        block.addStatement("builder.append('}')");
+        block.addStatement("return builder.toString()");
+        spec.addCode(block.build());
+        builder.addMethod(spec.build());
+    }
+
+    public static void build(TransFormInfo transform, TypeSpec.Builder builder, TransFormInfos transForms, Map<String, Property> properties) {
         List<Property> enumProps = properties.values().stream().filter(p -> p.kind.isEnum()).collect(Collectors.toList());
         for (Property property: enumProps) {
             ExecutorInfo info = property.findExecutor(fGet);
@@ -477,7 +544,10 @@ class Property {
                         ifPresent(p->entry.getValue().oneOfCase = property);
             }
         });
-        properties.values().forEach(property -> property.build(builder));
+        properties.values().forEach(property -> property.build(transform, builder));
+        if (transform.getProtoKind() == ProtoKind.MESSAGE) {
+            addToString(transform, builder, properties.values());
+        }
     }
 
     private static List<Function<String, String>> nameFunctions(PropertyKind kind) {

@@ -28,6 +28,11 @@ public class RouteNote {
         this.location = location;
     }
 
+    public RouteNote location(Point location) {
+        this.setLocation(location);
+        return this;
+    }
+
     public boolean hasMessage() {
         return this.message != null && this.message.length()>0;
     }
@@ -38,5 +43,19 @@ public class RouteNote {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public RouteNote message(String message) {
+        this.setMessage(message);
+        return this;
+    }
+
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("RouteNote{");
+        if (this.hasLocation()) builder.append("  location=").append(this.location);
+        if (this.hasMessage()) builder.append("  message='").append(this.message).append('\'');
+        builder.append('}');
+        return builder.toString();
     }
 }

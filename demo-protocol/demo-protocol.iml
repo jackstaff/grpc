@@ -13,8 +13,8 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Bundled Protobuf Distribution" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.jackstaff.grpc:grpc-generator:2.0.12" level="project" />
-    <orderEntry type="library" name="Maven: org.jackstaff.grpc:grpc-core:2.0.12" level="project" />
+    <orderEntry type="module" module-name="grpc-generator" scope="PROVIDED" />
+    <orderEntry type="module" module-name="grpc-core" />
     <orderEntry type="library" name="Maven: io.grpc:grpc-netty-shaded:1.29.0" level="project" />
     <orderEntry type="library" name="Maven: io.grpc:grpc-core:1.29.0" level="project" />
     <orderEntry type="library" name="Maven: com.google.code.gson:gson:2.8.6" level="project" />
@@ -43,7 +43,7 @@
     <orderEntry type="library" name="Maven: com.google.j2objc:j2objc-annotations:1.1" level="project" />
     <orderEntry type="library" name="Maven: org.codehaus.mojo:animal-sniffer-annotations:1.17" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: com.squareup:javapoet:1.12.1" level="project" />
-    <orderEntry type="library" name="Maven: org.jackstaff.grpc:grpc-spring-boot-starter:2.0.12" level="project" />
+    <orderEntry type="module" module-name="grpc-spring-boot-starter" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.30" level="project" />
   </component>
 </module>

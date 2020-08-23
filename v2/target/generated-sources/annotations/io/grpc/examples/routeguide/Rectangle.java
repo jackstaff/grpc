@@ -28,6 +28,11 @@ public class Rectangle {
         this.lo = lo;
     }
 
+    public Rectangle lo(Point lo) {
+        this.setLo(lo);
+        return this;
+    }
+
     public boolean hasHi() {
         return this.hi != null;
     }
@@ -38,5 +43,19 @@ public class Rectangle {
 
     public void setHi(Point hi) {
         this.hi = hi;
+    }
+
+    public Rectangle hi(Point hi) {
+        this.setHi(hi);
+        return this;
+    }
+
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("Rectangle{");
+        if (this.hasLo()) builder.append("  lo=").append(this.lo);
+        if (this.hasHi()) builder.append("  hi=").append(this.hi);
+        builder.append('}');
+        return builder.toString();
     }
 }

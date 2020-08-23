@@ -137,7 +137,8 @@ class TransFormInfo {
         MethodSpec.Builder forNumber = MethodSpec.methodBuilder("forNumber").
                 addModifiers(Modifier.PUBLIC, Modifier.STATIC).
                 returns(simpleClassName()).addParameter(Integer.TYPE, "value");
-        forNumber.addStatement("return valueOf($T.forNumber(value).name())", protoElement.asType());
+        forNumber.addStatement("return $T.ofNullable($T.forNumber(value)).map($T::name).map($T::valueOf).orElse(null)",
+                Optional.class, protoElement.asType(), Enum.class, simpleClassName());
         builder.addMethod(forNumber.build());
         this.registryCodeBlock = enumRegistryCode();
         return builder;
@@ -203,7 +204,7 @@ class TransFormInfo {
         }
         children.forEach(TransFormInfo::build);
         children.stream().map(TransFormInfo::getTypeSpec).filter(Objects::nonNull).forEach(builder::addType);
-        Property.build(builder, transForms, properties);
+        Property.build(this, builder, transForms, properties);
         if (protoKind == ProtoKind.MESSAGE) {
             Property.addConstructor(builder, properties);
             this.registryCodeBlock = messageRegistryCode();

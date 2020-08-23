@@ -28,6 +28,11 @@ public class Feature {
         this.name = name;
     }
 
+    public Feature name(String name) {
+        this.setName(name);
+        return this;
+    }
+
     public boolean hasLocation() {
         return this.location != null;
     }
@@ -38,5 +43,19 @@ public class Feature {
 
     public void setLocation(Point location) {
         this.location = location;
+    }
+
+    public Feature location(Point location) {
+        this.setLocation(location);
+        return this;
+    }
+
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("Feature{");
+        if (this.hasName()) builder.append("  name='").append(this.name).append('\'');
+        if (this.hasLocation()) builder.append("  location=").append(this.location);
+        builder.append('}');
+        return builder.toString();
     }
 }

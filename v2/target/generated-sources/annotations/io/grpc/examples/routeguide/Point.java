@@ -24,11 +24,30 @@ public class Point {
         this.latitude = latitude;
     }
 
+    public Point latitude(int latitude) {
+        this.setLatitude(latitude);
+        return this;
+    }
+
     public int getLongitude() {
         return this.longitude;
     }
 
     public void setLongitude(int longitude) {
         this.longitude = longitude;
+    }
+
+    public Point longitude(int longitude) {
+        this.setLongitude(longitude);
+        return this;
+    }
+
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("Point{");
+        builder.append("  latitude=").append(this.latitude);
+        builder.append("  longitude=").append(this.longitude);
+        builder.append('}');
+        return builder.toString();
     }
 }

@@ -27,4 +27,17 @@ public class FeatureDatabase {
     public void setFeature(List<Feature> feature) {
         this.feature = feature;
     }
+
+    public FeatureDatabase feature(List<Feature> feature) {
+        this.setFeature(feature);
+        return this;
+    }
+
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("FeatureDatabase{");
+        if (this.hasFeature()) builder.append("  feature.size=").append(this.feature.size());
+        builder.append('}');
+        return builder.toString();
+    }
 }
